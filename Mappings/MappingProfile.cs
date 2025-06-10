@@ -43,6 +43,18 @@ namespace TurneroApi.Mappings
             CreateMap<Usuario, UsuarioDto>()
                 .ForMember(dest => dest.RolTipo, opt => opt.MapFrom(src => src.RolNavigation.Tipo));
             CreateMap<UsuarioDto, Usuario>();
+
+            CreateMap<UsuarioCrearDto, Usuario>()
+                .ForMember(dest => dest.Historial, opt => opt.Ignore())
+                .ForMember(dest => dest.Puesto, opt => opt.Ignore())
+                .ForMember(dest => dest.RolNavigation, opt => opt.Ignore());
+            CreateMap<Usuario, UsuarioCrearDto>();
+
+            CreateMap<UsuarioActualizarDto, Usuario>()
+                .ForMember(dest => dest.Historial, opt => opt.Ignore())
+                .ForMember(dest => dest.Puesto, opt => opt.Ignore())
+                .ForMember(dest => dest.RolNavigation, opt => opt.Ignore());
+            CreateMap<Usuario, UsuarioActualizarDto>();
         }
     }
 }

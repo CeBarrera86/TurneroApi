@@ -7,28 +7,34 @@ using System.Text;
 using TurneroApi.Data;
 using TurneroApi.Models.Session;
 using TurneroApi.Services;
+using Microsoft.Extensions.Logging;
 using System.Linq;
 
 namespace TurneroApi.Controllers;
 
 [ApiController]
-[Route("api/token")] // Es buena práctica usar "api/" en el prefijo de ruta para APIs
+[Route("api/token")]
 public class TokenController : ControllerBase
 {
     private readonly IConfiguration _config;
     private readonly TurneroDbContext _turneroContext;
     private readonly GeaSeguridadDbContext _geaSeguridadContext;
+    private readonly ILogger<TokenController> _logger;
 
-    public TokenController(IConfiguration config, TurneroDbContext turneroContext, GeaSeguridadDbContext geaSeguridadContext)
+    public TokenController(IConfiguration config, TurneroDbContext turneroContext, GeaSeguridadDbContext geaSeguridadContext, ILogger<TokenController> logger)
     {
         _config = config;
         _turneroContext = turneroContext;
         _geaSeguridadContext = geaSeguridadContext;
+        _logger = logger;
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
     {
+        _logger.LogInformation("Intento de login recibido. Usuario: {Username}, IP Cliente: {ClientIp}",
+        request.Username,
+        request.ClientIp);
         // 0. Validación básica para evitar excepciones y ataques de tipo null reference
         if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
             return BadRequest("Credenciales inválidas.");

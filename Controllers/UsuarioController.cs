@@ -54,17 +54,33 @@ namespace TurneroApi.Controllers
         // PUT: api/Usuario/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PutUsuario(uint id, UsuarioDto usuarioDto)
+        public async Task<IActionResult> PutUsuario(uint id, UsuarioActualizarDto usuarioActualizarDto)
         {
-            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
+            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
 
-            if (user == null)
+            if (usuario == null)
                 return NotFound();
 
-            // Mapeo controlado (evita sobreescribir campos no deseados)
-            user.Nombre = usuarioDto.Nombre;
-            user.Username = usuarioDto.Username;
-            user.RolId = usuarioDto.RolId;
+            // Nombre
+            if (!string.IsNullOrEmpty(usuarioActualizarDto.Nombre) && usuarioActualizarDto.Nombre != usuario.Nombre)
+            {
+                usuario.Nombre = usuarioActualizarDto.Nombre;
+            }
+            // Apellido
+            if (!string.IsNullOrEmpty(usuarioActualizarDto.Apellido) && usuarioActualizarDto.Apellido != usuario.Apellido)
+            {
+                usuario.Apellido = usuarioActualizarDto.Apellido;
+            }
+            // Username
+            if (!string.IsNullOrEmpty(usuarioActualizarDto.Username) && usuarioActualizarDto.Username != usuario.Username)
+            {
+                usuario.Username = usuarioActualizarDto.Username;
+            }
+            // RolId
+            if (usuarioActualizarDto.RolId != 0 && usuarioActualizarDto.RolId != usuario.RolId)
+            {
+                usuario.RolId = usuarioActualizarDto.RolId;
+            }
 
             try
             {
@@ -77,27 +93,27 @@ namespace TurneroApi.Controllers
                 throw;
             }
 
-            await _context.Entry(user).Reference(u => u.RolNavigation).LoadAsync();
-            var userDto = _mapper.Map<UsuarioDto>(user);
+            await _context.Entry(usuario).Reference(u => u.RolNavigation).LoadAsync();
+            var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
 
-            return Ok(userDto);
+            return Ok(usuarioDto);
         }
 
         // POST: api/Usuario
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UsuarioDto>> PostUsuario(UsuarioDto usuarioDto)
+        public async Task<ActionResult<UsuarioCrearDto>> PostUsuario(UsuarioCrearDto UsuarioCrearDto)
         {
-            var usuario = _mapper.Map<Usuario>(usuarioDto);
+            var usuario = _mapper.Map<Usuario>(UsuarioCrearDto);
 
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
             await _context.Entry(usuario).Reference(u => u.RolNavigation).LoadAsync();
 
-            var resultDto = _mapper.Map<UsuarioDto>(usuario);
+            var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
 
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, resultDto);
+            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, usuarioDto);
         }
 
         // DELETE: api/Usuario/5

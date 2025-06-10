@@ -11,6 +11,8 @@ public class SectorConfig : IEntityTypeConfiguration<Sector>
         builder.HasKey(e => e.Id).HasName("PRIMARY");
         builder.ToTable("sectores");
         builder.HasIndex(e => e.PadreId, "padre_id");
+        builder.HasIndex(e => e.Letra).IsUnique();
+        builder.HasIndex(e => e.Nombre).IsUnique();
         builder.Property(e => e.Id)
             .HasColumnType("int(10) unsigned")
             .HasColumnName("id");

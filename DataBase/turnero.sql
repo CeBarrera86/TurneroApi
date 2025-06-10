@@ -25,8 +25,8 @@ CREATE TABLE clientes (
 CREATE TABLE sectores (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     padre_id INT UNSIGNED DEFAULT NULL,
-    letra VARCHAR(3) NULL,
-    nombre VARCHAR(50) NULL,
+    letra VARCHAR(3) NULL UNIQUE CHECK (letra REGEXP '^[A-Z]{1,3}$'),
+    nombre VARCHAR(50) NULL UNIQUE,
     descripcion VARCHAR(120) NULL,
     FOREIGN KEY (padre_id) REFERENCES sectores(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -57,7 +57,7 @@ CREATE TABLE puestos (
 -- Tabla: estados
 CREATE TABLE estados (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    letra VARCHAR(2) NOT NULL,
+    letra VARCHAR(2) NOT NULL UNIQUE CHECK (letra REGEXP '^[A-Z]{1,2}$'),
     descripcion VARCHAR(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

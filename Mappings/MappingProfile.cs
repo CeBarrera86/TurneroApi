@@ -10,6 +10,47 @@ namespace TurneroApi.Mappings
         {
             // Cliente
             CreateMap<Cliente, ClienteDto>().ReverseMap();
+
+            // Estado
+            CreateMap<Estado, EstadoDto>().ReverseMap();
+
+            CreateMap<EstadoCrearDto, Estado>().ReverseMap();
+
+            CreateMap<EstadoActualizarDto, Estado>()
+                .ForMember(dest => dest.Letra, opt => opt.Condition(src => !string.IsNullOrEmpty(src.Letra)))
+                .ForMember(dest => dest.Descripcion, opt => opt.Condition(src => !string.IsNullOrEmpty(src.Descripcion)));
+            CreateMap<Estado, EstadoActualizarDto>();
+
+            // Historial
+            CreateMap<Historial, HistorialDto>().ReverseMap();
+
+            // Mostrador
+            CreateMap<Mostrador, MostradorDto>()
+                .ForMember(dest => dest.SectorNombre, opt => opt.MapFrom(src => src.SectorNavigation.Nombre))
+                .ReverseMap();
+
+            // Puesto
+            CreateMap<Puesto, PuestoDto>()
+                .ForMember(dest => dest.UsuarioNombre, opt => opt.MapFrom(src => src.UsuarioNavigation.Nombre)) // Ajustar si es otro campo
+                .ForMember(dest => dest.MostradorNumero, opt => opt.MapFrom(src => src.MostradorNavigation.Numero))
+                .ReverseMap();
+
+            // Rol
+            CreateMap<Rol, RolDto>().ReverseMap();
+
+            CreateMap<RolCrearDto, Rol>().ReverseMap();
+
+            CreateMap<RolActualizarDto, Rol>().ReverseMap();
+
+            // Sector
+            CreateMap<Sector, SectorDto>()
+                .ForMember(dest => dest.PadreNombre, opt => opt.MapFrom(src => src.Padre != null ? src.Padre.Nombre : null))
+                .ReverseMap();
+
+            CreateMap<SectorCrearDto, Sector>().ReverseMap();
+
+            CreateMap<SectorActualizarDto, Sector>().ReverseMap();
+
             // Ticket
             CreateMap<Ticket, TicketDto>()
                 .ForMember(dest => dest.ClienteNombre, opt => opt.MapFrom(src => src.ClienteNavigation.Titular))
@@ -17,28 +58,10 @@ namespace TurneroApi.Mappings
                 .ForMember(dest => dest.SectorActualNombre, opt => opt.MapFrom(src => src.SectorIdActualNavigation.Nombre))
                 .ForMember(dest => dest.EstadoNombre, opt => opt.MapFrom(src => src.EstadoNavigation.Descripcion));
             CreateMap<TicketDto, Ticket>();
-            // Estado
-            CreateMap<Estado, EstadoDto>().ReverseMap();
-            // Historial
-            CreateMap<Historial, HistorialDto>().ReverseMap();
-            // Mostrador
-            CreateMap<Mostrador, MostradorDto>()
-                .ForMember(dest => dest.SectorNombre, opt => opt.MapFrom(src => src.SectorNavigation.Nombre))
-                .ReverseMap();
-            // Puesto
-            CreateMap<Puesto, PuestoDto>()
-                .ForMember(dest => dest.UsuarioNombre, opt => opt.MapFrom(src => src.UsuarioNavigation.Nombre)) // Ajustar si es otro campo
-                .ForMember(dest => dest.MostradorNumero, opt => opt.MapFrom(src => src.MostradorNavigation.Numero))
-                .ReverseMap();
-            // Rol
-            CreateMap<Rol, RolDto>().ReverseMap();
-            // Sector
-            CreateMap<Sector, SectorDto>()
-                .ForMember(dest => dest.PadreNombre, opt => opt.MapFrom(src => src.Padre!.Nombre))
-                .ReverseMap();
-            CreateMap<SectorDto, Sector>();
+
             // Turno
             CreateMap<Turno, TurnoDto>().ReverseMap();
+
             // Usuario
             CreateMap<Usuario, UsuarioDto>()
                 .ForMember(dest => dest.RolTipo, opt => opt.MapFrom(src => src.RolNavigation.Tipo));

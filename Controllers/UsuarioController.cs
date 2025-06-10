@@ -1,11 +1,12 @@
 using AutoMapper;
+using System.Globalization;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs;
 using TurneroApi.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 
 namespace TurneroApi.Controllers
 {
@@ -54,31 +55,64 @@ namespace TurneroApi.Controllers
         // PUT: api/Usuario/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PutUsuario(uint id, UsuarioActualizarDto usuarioActualizarDto)
+        public async Task<IActionResult> PutUsuario(uint id, [FromBody] UsuarioActualizarDto usuarioActualizarDto)
         {
             var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
-
             if (usuario == null)
                 return NotFound();
 
-            // Nombre
-            if (!string.IsNullOrEmpty(usuarioActualizarDto.Nombre) && usuarioActualizarDto.Nombre != usuario.Nombre)
+            // --- Manejo y Normalización de Nombre ---
+            string? nombre = null;
+            if (!string.IsNullOrEmpty(usuarioActualizarDto.Nombre))
             {
-                usuario.Nombre = usuarioActualizarDto.Nombre;
+                nombre = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioActualizarDto.Nombre.Trim().ToLowerInvariant());
+                nombre = Regex.Replace(nombre, @"\s+", " ").Trim();
             }
-            // Apellido
-            if (!string.IsNullOrEmpty(usuarioActualizarDto.Apellido) && usuarioActualizarDto.Apellido != usuario.Apellido)
+            if (!string.IsNullOrEmpty(nombre) && nombre != usuario.Nombre)
             {
-                usuario.Apellido = usuarioActualizarDto.Apellido;
+                usuario.Nombre = nombre;
             }
-            // Username
-            if (!string.IsNullOrEmpty(usuarioActualizarDto.Username) && usuarioActualizarDto.Username != usuario.Username)
+
+            // --- Manejo y Normalización de Apellido ---
+            string? apellido = null;
+            if (!string.IsNullOrEmpty(usuarioActualizarDto.Apellido))
             {
-                usuario.Username = usuarioActualizarDto.Username;
+                apellido = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioActualizarDto.Apellido.Trim().ToLowerInvariant());
+                apellido = Regex.Replace(apellido, @"\s+", " ").Trim();
             }
-            // RolId
+            if (!string.IsNullOrEmpty(apellido) && apellido != usuario.Apellido)
+            {
+                usuario.Apellido = apellido;
+            }
+
+            // --- Manejo y Normalización de Username ---
+            string? username = null;
+            if (!string.IsNullOrEmpty(usuarioActualizarDto.Username))
+            {
+                username = usuarioActualizarDto.Username.Trim().ToLowerInvariant();
+                username = Regex.Replace(username, @"\s+", "");
+            }
+
+            if (!string.IsNullOrEmpty(username) && username != usuario.Username)
+            {
+                var existingUserWithSameUsername = await _context.Usuarios
+                    .FirstOrDefaultAsync(u => u.Username == username && u.Id != id);
+
+                if (existingUserWithSameUsername != null)
+                {
+                    return BadRequest(new { message = $"El nombre de usuario '{username}' ya está en uso por otro usuario. Debe ser único." });
+                }
+                usuario.Username = username;
+            }
+
+            // --- Manejo de RolId ---
             if (usuarioActualizarDto.RolId != 0 && usuarioActualizarDto.RolId != usuario.RolId)
             {
+                var rolExiste = await _context.Roles.AnyAsync(r => r.Id == usuarioActualizarDto.RolId);
+                if (!rolExiste)
+                {
+                    return BadRequest(new { message = $"El RolId '{usuarioActualizarDto.RolId}' proporcionado no es válido." });
+                }
                 usuario.RolId = usuarioActualizarDto.RolId;
             }
 
@@ -92,6 +126,10 @@ namespace TurneroApi.Controllers
                     return NotFound();
                 throw;
             }
+            catch (DbUpdateException) 
+            {
+                return StatusCode(500, new { message = "Error al actualizar el usuario. Asegúrate de que el nombre de usuario sea único." });
+            }
 
             await _context.Entry(usuario).Reference(u => u.RolNavigation).LoadAsync();
             var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
@@ -102,18 +140,85 @@ namespace TurneroApi.Controllers
         // POST: api/Usuario
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<UsuarioCrearDto>> PostUsuario(UsuarioCrearDto UsuarioCrearDto)
+        public async Task<ActionResult<UsuarioDto>> PostUsuario([FromBody] UsuarioCrearDto usuarioCrearDto)
         {
-            var usuario = _mapper.Map<Usuario>(UsuarioCrearDto);
+            // --- Limpieza y Normalización de Datos de Entrada ---
+            string? nombre = null;
+            string? apellido = null;
+            string? username = null;
+
+            if (!string.IsNullOrEmpty(usuarioCrearDto.Nombre))
+            {
+                nombre = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioCrearDto.Nombre.Trim().ToLowerInvariant());
+                nombre = Regex.Replace(nombre, @"\s+", " ").Trim();
+            }
+            
+            if (!string.IsNullOrEmpty(usuarioCrearDto.Apellido))
+            {
+                apellido = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioCrearDto.Apellido.Trim().ToLowerInvariant());
+                apellido = Regex.Replace(apellido, @"\s+", " ").Trim();
+            }
+            
+            if (!string.IsNullOrEmpty(usuarioCrearDto.Username))
+            {
+                username = usuarioCrearDto.Username.Trim().ToLowerInvariant();
+                username = Regex.Replace(username, @"\s+", "");
+            }
+
+            // Validación de campos obligatorios
+            if (string.IsNullOrEmpty(nombre))
+            {
+                return BadRequest(new { message = "El nombre del usuario no puede estar vacío." });
+            }
+            if (string.IsNullOrEmpty(apellido))
+            {
+                return BadRequest(new { message = "El apellido del usuario no puede estar vacío." });
+            }
+            if (string.IsNullOrEmpty(username))
+            {
+                return BadRequest(new { message = "El nombre de usuario no puede estar vacío." });
+            }
+
+            // Validación de unicidad para Username
+            var usuarioExistente = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == username);
+            if (usuarioExistente != null)
+            {
+                return BadRequest(new { message = $"El nombre de usuario '{username}' ya está en uso. Debe ser único." });
+            }
+
+            // Validación de RolId
+            if (usuarioCrearDto.RolId == 0)
+            {
+                return BadRequest(new { message = "El RolId proporcionado no es válido (no puede ser 0)." });
+            }
+            var rolExiste = await _context.Roles.AnyAsync(r => r.Id == usuarioCrearDto.RolId);
+            if (!rolExiste)
+            {
+                return BadRequest(new { message = $"El RolId '{usuarioCrearDto.RolId}' proporcionado no es válido." });
+            }
+
+            var usuario = _mapper.Map<Usuario>(usuarioCrearDto);
+
+            usuario.Nombre = nombre!;
+            usuario.Apellido = apellido!;
+            usuario.Username = username!;
+            usuario.RolId = usuarioCrearDto.RolId;
 
             _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return StatusCode(500, new { message = "Error al guardar el usuario. Asegúrate de que el nombre de usuario sea único y que no haya otros problemas de la base de datos." });
+            }
 
             await _context.Entry(usuario).Reference(u => u.RolNavigation).LoadAsync();
-
             var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
 
-            return CreatedAtAction(nameof(GetUsuario), new { id = usuario.Id }, usuarioDto);
+            return CreatedAtAction(nameof(GetUsuario), new { id = usuarioDto.Id }, usuarioDto);
         }
 
         // DELETE: api/Usuario/5

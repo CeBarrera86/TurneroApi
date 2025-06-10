@@ -19,5 +19,6 @@ public class EstadoConfig : IEntityTypeConfiguration<Estado>
         builder.Property(e => e.Letra)
             .HasMaxLength(2)
             .HasColumnName("letra");
+        builder.HasIndex(e => e.Letra).IsUnique();
     }
 }

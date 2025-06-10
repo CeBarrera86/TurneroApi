@@ -5,6 +5,4 @@ public class ClienteDto
     public ulong Id { get; set; }
     public string Dni { get; set; } = null!;
     public string Titular { get; set; } = null!;
-    public string? Celular { get; set; }
-    public string? Email { get; set; }
 }

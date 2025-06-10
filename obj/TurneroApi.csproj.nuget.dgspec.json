@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Proyectos\\TurneroApi\\TurneroApi.csproj": {}
+    "D:\\GitHub\\NetCore\\TurneroApi\\TurneroApi.csproj": {}
   },
   "projects": {
-    "C:\\Proyectos\\TurneroApi\\TurneroApi.csproj": {
+    "D:\\GitHub\\NetCore\\TurneroApi\\TurneroApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Proyectos\\TurneroApi\\TurneroApi.csproj",
+        "projectUniqueName": "D:\\GitHub\\NetCore\\TurneroApi\\TurneroApi.csproj",
         "projectName": "TurneroApi",
-        "projectPath": "C:\\Proyectos\\TurneroApi\\TurneroApi.csproj",
+        "projectPath": "D:\\GitHub\\NetCore\\TurneroApi\\TurneroApi.csproj",
         "packagesPath": "C:\\Users\\sistemas\\.nuget\\packages\\",
-        "outputPath": "C:\\Proyectos\\TurneroApi\\obj\\",
+        "outputPath": "D:\\GitHub\\NetCore\\TurneroApi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\sistemas\\AppData\\Roaming\\NuGet\\NuGet.Config"

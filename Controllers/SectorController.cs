@@ -1,8 +1,11 @@
-using AutoMapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -12,46 +15,44 @@ namespace TurneroApi.Controllers
     public class SectorController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public SectorController(TurneroDbContext context, IMapper mapper)
+        public SectorController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Sector
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectores()
+        public async Task<ActionResult<IEnumerable<Sector>>> GetSectores()
         {
-            var sectores = await _context.Sectores.ToListAsync();
-            return Ok(_mapper.Map<IEnumerable<SectorDto>>(sectores));
+            return await _context.Sectores.ToListAsync();
         }
 
         // GET: api/Sector/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<SectorDto>> GetSector(ulong id)
+        public async Task<ActionResult<Sector>> GetSector(uint id)
         {
             var sector = await _context.Sectores.FindAsync(id);
-            if (sector == null)
-                return NotFound();
 
-            return Ok(_mapper.Map<SectorDto>(sector));
+            if (sector == null)
+            {
+                return NotFound();
+            }
+
+            return sector;
         }
 
         // PUT: api/Sector/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSector(ulong id, SectorDto dto)
+        public async Task<IActionResult> PutSector(uint id, Sector sector)
         {
-            if (id != dto.Id)
-                return BadRequest("El ID proporcionado no coincide con el del cuerpo.");
+            if (id != sector.Id)
+            {
+                return BadRequest();
+            }
 
-            var entity = await _context.Sectores.FindAsync(id);
-            if (entity == null)
-                return NotFound();
-
-            _mapper.Map(dto, entity);
-            entity.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(sector).State = EntityState.Modified;
 
             try
             {
@@ -60,34 +61,38 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!SectorExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
         // POST: api/Sector
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<SectorDto>> PostSector(SectorDto dto)
+        public async Task<ActionResult<Sector>> PostSector(Sector sector)
         {
-            var entity = _mapper.Map<Sector>(dto);
-            entity.CreatedAt = DateTime.UtcNow;
-
-            _context.Sectores.Add(entity);
+            _context.Sectores.Add(sector);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetSector), new { id = entity.Id }, _mapper.Map<SectorDto>(entity));
+            return CreatedAtAction("GetSector", new { id = sector.Id }, sector);
         }
 
         // DELETE: api/Sector/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSector(ulong id)
+        public async Task<IActionResult> DeleteSector(uint id)
         {
             var sector = await _context.Sectores.FindAsync(id);
             if (sector == null)
+            {
                 return NotFound();
+            }
 
             _context.Sectores.Remove(sector);
             await _context.SaveChangesAsync();
@@ -95,7 +100,7 @@ namespace TurneroApi.Controllers
             return NoContent();
         }
 
-        private bool SectorExists(ulong id)
+        private bool SectorExists(uint id)
         {
             return _context.Sectores.Any(e => e.Id == id);
         }

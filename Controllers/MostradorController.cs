@@ -1,8 +1,11 @@
-using AutoMapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -12,48 +15,44 @@ namespace TurneroApi.Controllers
     public class MostradorController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public MostradorController(TurneroDbContext context, IMapper mapper)
+        public MostradorController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Mostrador
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MostradorDto>>> GetMostradores()
+        public async Task<ActionResult<IEnumerable<Mostrador>>> GetMostradores()
         {
-            var mostradores = await _context.Mostradores.ToListAsync();
-            var dtoList = _mapper.Map<IEnumerable<MostradorDto>>(mostradores);
-            return Ok(dtoList);
+            return await _context.Mostradores.ToListAsync();
         }
 
         // GET: api/Mostrador/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<MostradorDto>> GetMostrador(ulong id)
+        public async Task<ActionResult<Mostrador>> GetMostrador(uint id)
         {
             var mostrador = await _context.Mostradores.FindAsync(id);
 
             if (mostrador == null)
+            {
                 return NotFound();
+            }
 
-            return Ok(_mapper.Map<MostradorDto>(mostrador));
+            return mostrador;
         }
 
         // PUT: api/Mostrador/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutMostrador(ulong id, MostradorDto dto)
+        public async Task<IActionResult> PutMostrador(uint id, Mostrador mostrador)
         {
-            if (id != dto.Id)
-                return BadRequest("El ID del DTO no coincide con el ID de la URL.");
+            if (id != mostrador.Id)
+            {
+                return BadRequest();
+            }
 
-            var entity = await _context.Mostradores.FindAsync(id);
-            if (entity == null)
-                return NotFound();
-
-            _mapper.Map(dto, entity);
-            entity.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(mostrador).State = EntityState.Modified;
 
             try
             {
@@ -62,43 +61,46 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!MostradorExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
         // POST: api/Mostrador
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<MostradorDto>> PostMostrador(MostradorDto dto)
+        public async Task<ActionResult<Mostrador>> PostMostrador(Mostrador mostrador)
         {
-            var entity = _mapper.Map<Mostrador>(dto);
-            entity.CreatedAt = DateTime.UtcNow;
-
-            _context.Mostradores.Add(entity);
+            _context.Mostradores.Add(mostrador);
             await _context.SaveChangesAsync();
 
-            var resultDto = _mapper.Map<MostradorDto>(entity);
-            return CreatedAtAction(nameof(GetMostrador), new { id = resultDto.Id }, resultDto);
+            return CreatedAtAction("GetMostrador", new { id = mostrador.Id }, mostrador);
         }
 
         // DELETE: api/Mostrador/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteMostrador(ulong id)
+        public async Task<IActionResult> DeleteMostrador(uint id)
         {
-            var entity = await _context.Mostradores.FindAsync(id);
-            if (entity == null)
+            var mostrador = await _context.Mostradores.FindAsync(id);
+            if (mostrador == null)
+            {
                 return NotFound();
+            }
 
-            _context.Mostradores.Remove(entity);
+            _context.Mostradores.Remove(mostrador);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool MostradorExists(ulong id)
+        private bool MostradorExists(uint id)
         {
             return _context.Mostradores.Any(e => e.Id == id);
         }

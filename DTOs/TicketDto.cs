@@ -5,15 +5,16 @@ public class TicketDto
     public ulong Id { get; set; }
     public string Letra { get; set; } = null!;
     public uint Numero { get; set; }
-    public DateOnly FechaTicket { get; set; }
-    public ulong Cliente { get; set; }
-    public ulong Sector { get; set; }
-    public ulong Estado { get; set; }
-    public DateTime? CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
+    public ulong ClienteId { get; set; }
+    public DateTime Fecha { get; set; }
+    public uint SectorIdOrigen { get; set; }
+    public uint SectorIdActual { get; set; }
+    public uint EstadoId { get; set; }
+    public DateTime Actualizado { get; set; }
 
     // Nombres representativos opcionales para mostrar en UI
     public string? ClienteNombre { get; set; }
-    public string? SectorNombre { get; set; }
+    public string? SectorOrigenNombre { get; set; }
+    public string? SectorActualNombre { get; set; }
     public string? EstadoNombre { get; set; }
 }

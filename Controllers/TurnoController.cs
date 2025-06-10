@@ -1,8 +1,11 @@
-using AutoMapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -12,46 +15,44 @@ namespace TurneroApi.Controllers
     public class TurnoController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public TurnoController(TurneroDbContext context, IMapper mapper)
+        public TurnoController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Turno
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TurnoDto>>> GetTurnos()
+        public async Task<ActionResult<IEnumerable<Turno>>> GetTurnos()
         {
-            var turnos = await _context.Turnos.ToListAsync();
-            return Ok(_mapper.Map<IEnumerable<TurnoDto>>(turnos));
+            return await _context.Turnos.ToListAsync();
         }
 
         // GET: api/Turno/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<TurnoDto>> GetTurno(ulong id)
+        public async Task<ActionResult<Turno>> GetTurno(ulong id)
         {
             var turno = await _context.Turnos.FindAsync(id);
-            if (turno == null)
-                return NotFound();
 
-            return Ok(_mapper.Map<TurnoDto>(turno));
+            if (turno == null)
+            {
+                return NotFound();
+            }
+
+            return turno;
         }
 
         // PUT: api/Turno/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutTurno(ulong id, TurnoDto dto)
+        public async Task<IActionResult> PutTurno(ulong id, Turno turno)
         {
-            if (id != dto.Id)
-                return BadRequest("El ID de la URL no coincide con el del DTO.");
+            if (id != turno.Id)
+            {
+                return BadRequest();
+            }
 
-            var entity = await _context.Turnos.FindAsync(id);
-            if (entity == null)
-                return NotFound();
-
-            _mapper.Map(dto, entity);
-            entity.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(turno).State = EntityState.Modified;
 
             try
             {
@@ -60,25 +61,27 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!TurnoExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
         // POST: api/Turno
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<TurnoDto>> PostTurno(TurnoDto dto)
+        public async Task<ActionResult<Turno>> PostTurno(Turno turno)
         {
-            var entity = _mapper.Map<Turno>(dto);
-            entity.CreatedAt = DateTime.UtcNow;
-
-            _context.Turnos.Add(entity);
+            _context.Turnos.Add(turno);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetTurno), new { id = entity.Id }, _mapper.Map<TurnoDto>(entity));
+            return CreatedAtAction("GetTurno", new { id = turno.Id }, turno);
         }
 
         // DELETE: api/Turno/5
@@ -87,7 +90,9 @@ namespace TurneroApi.Controllers
         {
             var turno = await _context.Turnos.FindAsync(id);
             if (turno == null)
+            {
                 return NotFound();
+            }
 
             _context.Turnos.Remove(turno);
             await _context.SaveChangesAsync();

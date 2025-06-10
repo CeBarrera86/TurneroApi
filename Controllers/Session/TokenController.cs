@@ -27,8 +27,12 @@ public class TokenController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> GenerateToken([FromQuery] LoginRequest request)
+    public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
     {
+        // 0. Validación básica para evitar excepciones y ataques de tipo null reference
+        if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            return BadRequest("Credenciales inválidas.");
+
         // 1. Validar existencia del usuario en GeaSeguridad_Corpico
         var geaUsuario = await _geaSeguridadContext.GeaUsuarios.FirstOrDefaultAsync(u => u.USU_CODIGO == request.Username);
         if (geaUsuario == null)
@@ -47,7 +51,7 @@ public class TokenController : ControllerBase
         }
 
         // 4. Obtener los detalles del usuario de la base de datos de Turnero
-        var turneroUser = await _turneroContext.Users.Include(u => u.RoleNavigation)
+        var turneroUser = await _turneroContext.Usuarios.Include(u => u.RolNavigation)
                         .FirstOrDefaultAsync(u => u.Username == request.Username);
         if (turneroUser == null)
         {
@@ -59,7 +63,7 @@ public class TokenController : ControllerBase
         {
             new Claim(ClaimTypes.NameIdentifier, turneroUser.Id.ToString()), // Id del usuario de Turnero
             new Claim(ClaimTypes.Name, turneroUser.Username),                // username
-            new Claim(ClaimTypes.Role, turneroUser.RoleNavigation.Tipo)      // rol (ej. "Administrador", "Operador")
+            new Claim(ClaimTypes.Role, turneroUser.RolNavigation.Tipo)      // rol (ej. "Administrador", "Operador")
         };
 
         // 5. Validar configuración JWT
@@ -70,6 +74,9 @@ public class TokenController : ControllerBase
         if (string.IsNullOrWhiteSpace(jwtKey) || string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
             return StatusCode(500, "Configuración JWT incompleta en appsettings.json.");
 
+        if (!int.TryParse(_config["Jwt:DurationInMinutes"], out int duration))
+            duration = 60;
+
         // 6. Generar token
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -78,7 +85,7 @@ public class TokenController : ControllerBase
             issuer: jwtIssuer,
             audience: jwtAudience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(Convert.ToDouble(_config["Jwt:DurationInMinutes"] ?? "60")), // Duración configurable
+            expires: DateTime.UtcNow.AddMinutes(duration), // Duración configurable
             signingCredentials: creds
         );
 
@@ -88,10 +95,10 @@ public class TokenController : ControllerBase
         {
             token = tokenString,
             username = turneroUser.Username,
-            name = turneroUser.Name,
-            rol = turneroUser.RoleNavigation.Tipo,
+            name = turneroUser.Nombre,
+            rol = turneroUser.RolNavigation.Tipo,
             mostradorTipo = mostrador.Tipo,
-            mostradorSector = mostrador.Sector
+            mostradorSector = mostrador.SectorId
         });
     }
 }

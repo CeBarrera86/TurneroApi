@@ -1,8 +1,11 @@
-using AutoMapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -12,47 +15,44 @@ namespace TurneroApi.Controllers
     public class RolController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public RolController(TurneroDbContext context, IMapper mapper)
+        public RolController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Rol
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<RolDto>>> GetRoles()
+        public async Task<ActionResult<IEnumerable<Rol>>> GetRoles()
         {
-            var roles = await _context.Roles.ToListAsync();
-            var dtoList = _mapper.Map<IEnumerable<RolDto>>(roles);
-            return Ok(dtoList);
+            return await _context.Roles.ToListAsync();
         }
 
         // GET: api/Rol/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<RolDto>> GetRol(ulong id)
+        public async Task<ActionResult<Rol>> GetRol(uint id)
         {
             var rol = await _context.Roles.FindAsync(id);
-            if (rol == null)
-                return NotFound();
 
-            return Ok(_mapper.Map<RolDto>(rol));
+            if (rol == null)
+            {
+                return NotFound();
+            }
+
+            return rol;
         }
 
         // PUT: api/Rol/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutRol(ulong id, RolDto dto)
+        public async Task<IActionResult> PutRol(uint id, Rol rol)
         {
-            if (id != dto.Id)
-                return BadRequest("El ID del DTO no coincide con el ID de la URL.");
+            if (id != rol.Id)
+            {
+                return BadRequest();
+            }
 
-            var entity = await _context.Roles.FindAsync(id);
-            if (entity == null)
-                return NotFound();
-
-            _mapper.Map(dto, entity);
-            entity.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(rol).State = EntityState.Modified;
 
             try
             {
@@ -61,35 +61,38 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!RolExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
         // POST: api/Rol
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<RolDto>> PostRol(RolDto dto)
+        public async Task<ActionResult<Rol>> PostRol(Rol rol)
         {
-            var entity = _mapper.Map<Rol>(dto);
-            entity.CreatedAt = DateTime.UtcNow;
-
-            _context.Roles.Add(entity);
+            _context.Roles.Add(rol);
             await _context.SaveChangesAsync();
 
-            var resultDto = _mapper.Map<RolDto>(entity);
-            return CreatedAtAction(nameof(GetRol), new { id = resultDto.Id }, resultDto);
+            return CreatedAtAction("GetRol", new { id = rol.Id }, rol);
         }
 
         // DELETE: api/Rol/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRol(ulong id)
+        public async Task<IActionResult> DeleteRol(uint id)
         {
             var rol = await _context.Roles.FindAsync(id);
             if (rol == null)
+            {
                 return NotFound();
+            }
 
             _context.Roles.Remove(rol);
             await _context.SaveChangesAsync();
@@ -97,7 +100,7 @@ namespace TurneroApi.Controllers
             return NoContent();
         }
 
-        private bool RolExists(ulong id)
+        private bool RolExists(uint id)
         {
             return _context.Roles.Any(e => e.Id == id);
         }

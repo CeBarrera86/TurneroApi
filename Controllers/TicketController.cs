@@ -1,12 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.Models;
-using TurneroApi.DTOs;
-using AutoMapper;
 
 namespace TurneroApi.Controllers
 {
@@ -15,69 +15,43 @@ namespace TurneroApi.Controllers
     public class TicketController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public TicketController(TurneroDbContext context, IMapper mapper)
+        public TicketController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Ticket
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TicketDto>>> GetTickets()
+        public async Task<ActionResult<IEnumerable<Ticket>>> GetTickets()
         {
-            var tickets = await _context.Tickets
-                .Include(t => t.ClienteNavigation)
-                .Include(t => t.EstadoNavigation)
-                .Include(t => t.SectorNavigation)
-                .ToListAsync();
-
-            var ticketDtos = _mapper.Map<IEnumerable<TicketDto>>(tickets);
-            return Ok(ticketDtos);
+            return await _context.Tickets.ToListAsync();
         }
 
         // GET: api/Ticket/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<TicketDto>> GetTicket(ulong id)
+        public async Task<ActionResult<Ticket>> GetTicket(ulong id)
         {
-            var ticket = await _context.Tickets
-                .Include(t => t.ClienteNavigation)
-                .Include(t => t.EstadoNavigation)
-                .Include(t => t.SectorNavigation)
-                .FirstOrDefaultAsync(t => t.Id == id);
+            var ticket = await _context.Tickets.FindAsync(id);
 
             if (ticket == null)
             {
                 return NotFound();
             }
 
-            var ticketDto = _mapper.Map<TicketDto>(ticket);
-            return Ok(ticketDto);
-        }
-
-        // POST: api/Ticket
-        [HttpPost]
-        public async Task<ActionResult<TicketDto>> PostTicket(TicketDto ticketDto)
-        {
-            var ticket = _mapper.Map<Ticket>(ticketDto);
-            _context.Tickets.Add(ticket);
-            await _context.SaveChangesAsync();
-
-            var createdDto = _mapper.Map<TicketDto>(ticket);
-            return CreatedAtAction(nameof(GetTicket), new { id = ticket.Id }, createdDto);
+            return ticket;
         }
 
         // PUT: api/Ticket/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutTicket(ulong id, TicketDto ticketDto)
+        public async Task<IActionResult> PutTicket(ulong id, Ticket ticket)
         {
-            if (id != ticketDto.Id)
+            if (id != ticket.Id)
             {
                 return BadRequest();
             }
 
-            var ticket = _mapper.Map<Ticket>(ticketDto);
             _context.Entry(ticket).State = EntityState.Modified;
 
             try
@@ -99,6 +73,17 @@ namespace TurneroApi.Controllers
             return NoContent();
         }
 
+        // POST: api/Ticket
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<Ticket>> PostTicket(Ticket ticket)
+        {
+            _context.Tickets.Add(ticket);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetTicket", new { id = ticket.Id }, ticket);
+        }
+
         // DELETE: api/Ticket/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTicket(ulong id)
@@ -117,7 +102,7 @@ namespace TurneroApi.Controllers
 
         private bool TicketExists(ulong id)
         {
-            return _context.Tickets.Any(t => t.Id == id);
+            return _context.Tickets.Any(e => e.Id == id);
         }
     }
 }

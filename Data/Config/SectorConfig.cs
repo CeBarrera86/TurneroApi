@@ -10,24 +10,24 @@ public class SectorConfig : IEntityTypeConfiguration<Sector>
     {
         builder.HasKey(e => e.Id).HasName("PRIMARY");
         builder.ToTable("sectores");
-        builder.HasIndex(e => e.Letra, "sectores_letra_unique").IsUnique();
+        builder.HasIndex(e => e.PadreId, "padre_id");
         builder.Property(e => e.Id)
-            .HasColumnType("bigint(20) unsigned")
+            .HasColumnType("int(10) unsigned")
             .HasColumnName("id");
-        builder.Property(e => e.CreatedAt)
-            .HasColumnType("timestamp")
-            .HasColumnName("created_at");
         builder.Property(e => e.Descripcion)
-            .HasMaxLength(150)
+            .HasMaxLength(120)
             .HasColumnName("descripcion");
         builder.Property(e => e.Letra)
-            .HasMaxLength(2)
+            .HasMaxLength(3)
             .HasColumnName("letra");
         builder.Property(e => e.Nombre)
-            .HasMaxLength(25)
+            .HasMaxLength(50)
             .HasColumnName("nombre");
-        builder.Property(e => e.UpdatedAt)
-            .HasColumnType("timestamp")
-            .HasColumnName("updated_at");
+        builder.Property(e => e.PadreId)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("padre_id");
+        builder.HasOne(d => d.Padre).WithMany(p => p.InversePadre)
+            .HasForeignKey(d => d.PadreId)
+            .HasConstraintName("sectores_ibfk_1");
     }
 }

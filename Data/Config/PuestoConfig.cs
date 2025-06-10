@@ -10,31 +10,34 @@ public class PuestoConfig : IEntityTypeConfiguration<Puesto>
     {
         builder.HasKey(e => e.Id).HasName("PRIMARY");
         builder.ToTable("puestos");
-        builder.HasIndex(e => e.Login, "puestos_login_index");
-        builder.HasIndex(e => e.Mostrador, "puestos_mostrador_foreign");
-        builder.HasIndex(e => e.User, "puestos_user_foreign");
+        builder.HasIndex(e => e.UsuarioId, "idx_puestos_usuario");
+        builder.HasIndex(e => e.MostradorId, "mostrador_id");
         builder.Property(e => e.Id)
-            .HasColumnType("bigint(20) unsigned")
+            .HasColumnType("int(10) unsigned")
             .HasColumnName("id");
+        builder.Property(e => e.Activo)
+            .IsRequired()
+            .HasDefaultValueSql("'1'")
+            .HasColumnName("activo");
         builder.Property(e => e.Login)
             .HasColumnType("datetime")
             .HasColumnName("login");
         builder.Property(e => e.Logout)
             .HasColumnType("datetime")
             .HasColumnName("logout");
-        builder.Property(e => e.Mostrador)
-            .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("mostrador");
-        builder.Property(e => e.User)
-            .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("user");
+        builder.Property(e => e.MostradorId)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("mostrador_id");
+        builder.Property(e => e.UsuarioId)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("usuario_id");
         builder.HasOne(d => d.MostradorNavigation).WithMany(p => p.Puesto)
-            .HasForeignKey(d => d.Mostrador)
+            .HasForeignKey(d => d.MostradorId)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("puestos_mostrador_foreign");
-        builder.HasOne(d => d.UserNavigation).WithMany(p => p.Puesto)
-            .HasForeignKey(d => d.User)
+            .HasConstraintName("puestos_ibfk_2");
+        builder.HasOne(d => d.UsuarioNavigation).WithMany(p => p.Puesto)
+            .HasForeignKey(d => d.UsuarioId)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("puestos_user_foreign");
+            .HasConstraintName("puestos_ibfk_1");
     }
 }

@@ -1,8 +1,11 @@
-using AutoMapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -12,48 +15,44 @@ namespace TurneroApi.Controllers
     public class PuestoController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public PuestoController(TurneroDbContext context, IMapper mapper)
+        public PuestoController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Puesto
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<PuestoDto>>> GetPuestos()
+        public async Task<ActionResult<IEnumerable<Puesto>>> GetPuestos()
         {
-            var puestos = await _context.Puestos.ToListAsync();
-            var dtoList = _mapper.Map<IEnumerable<PuestoDto>>(puestos);
-            return Ok(dtoList);
+            return await _context.Puestos.ToListAsync();
         }
 
         // GET: api/Puesto/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<PuestoDto>> GetPuesto(ulong id)
+        public async Task<ActionResult<Puesto>> GetPuesto(uint id)
         {
             var puesto = await _context.Puestos.FindAsync(id);
 
             if (puesto == null)
+            {
                 return NotFound();
+            }
 
-            return Ok(_mapper.Map<PuestoDto>(puesto));
+            return puesto;
         }
 
         // PUT: api/Puesto/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutPuesto(ulong id, PuestoDto dto)
+        public async Task<IActionResult> PutPuesto(uint id, Puesto puesto)
         {
-            if (id != dto.Id)
-                return BadRequest("El ID del DTO no coincide con el ID de la URL.");
+            if (id != puesto.Id)
+            {
+                return BadRequest();
+            }
 
-            var entity = await _context.Puestos.FindAsync(id);
-            if (entity == null)
-                return NotFound();
-
-            _mapper.Map(dto, entity);
-            entity.Logout = DateTime.UtcNow;
+            _context.Entry(puesto).State = EntityState.Modified;
 
             try
             {
@@ -62,43 +61,46 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!PuestoExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
         // POST: api/Puesto
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<PuestoDto>> PostPuesto(PuestoDto dto)
+        public async Task<ActionResult<Puesto>> PostPuesto(Puesto puesto)
         {
-            var entity = _mapper.Map<Puesto>(dto);
-            entity.Login = DateTime.UtcNow;
-
-            _context.Puestos.Add(entity);
+            _context.Puestos.Add(puesto);
             await _context.SaveChangesAsync();
 
-            var resultDto = _mapper.Map<PuestoDto>(entity);
-            return CreatedAtAction(nameof(GetPuesto), new { id = resultDto.Id }, resultDto);
+            return CreatedAtAction("GetPuesto", new { id = puesto.Id }, puesto);
         }
 
         // DELETE: api/Puesto/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePuesto(ulong id)
+        public async Task<IActionResult> DeletePuesto(uint id)
         {
-            var entity = await _context.Puestos.FindAsync(id);
-            if (entity == null)
+            var puesto = await _context.Puestos.FindAsync(id);
+            if (puesto == null)
+            {
                 return NotFound();
+            }
 
-            _context.Puestos.Remove(entity);
+            _context.Puestos.Remove(puesto);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool PuestoExists(ulong id)
+        private bool PuestoExists(uint id)
         {
             return _context.Puestos.Any(e => e.Id == id);
         }

@@ -1,8 +1,11 @@
-using AutoMapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -12,48 +15,44 @@ namespace TurneroApi.Controllers
     public class EstadoController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public EstadoController(TurneroDbContext context, IMapper mapper)
+        public EstadoController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
         // GET: api/Estado
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<EstadoDto>>> GetEstados()
+        public async Task<ActionResult<IEnumerable<Estado>>> GetEstados()
         {
-            var estados = await _context.Estados.ToListAsync();
-            var estadosDto = _mapper.Map<IEnumerable<EstadoDto>>(estados);
-            return Ok(estadosDto);
+            return await _context.Estados.ToListAsync();
         }
 
         // GET: api/Estado/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<EstadoDto>> GetEstado(ulong id)
+        public async Task<ActionResult<Estado>> GetEstado(uint id)
         {
             var estado = await _context.Estados.FindAsync(id);
 
             if (estado == null)
+            {
                 return NotFound();
+            }
 
-            return Ok(_mapper.Map<EstadoDto>(estado));
+            return estado;
         }
 
         // PUT: api/Estado/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutEstado(ulong id, EstadoDto estadoDto)
+        public async Task<IActionResult> PutEstado(uint id, Estado estado)
         {
-            if (id != estadoDto.Id)
-                return BadRequest("ID de la URL y el objeto no coinciden.");
+            if (id != estado.Id)
+            {
+                return BadRequest();
+            }
 
-            var estado = await _context.Estados.FindAsync(id);
-            if (estado == null)
-                return NotFound();
-
-            _mapper.Map(estadoDto, estado);
-            estado.UpdatedAt = DateTime.UtcNow;
+            _context.Entry(estado).State = EntityState.Modified;
 
             try
             {
@@ -62,36 +61,38 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!EstadoExists(id))
+                {
                     return NotFound();
+                }
                 else
+                {
                     throw;
+                }
             }
 
             return NoContent();
         }
 
         // POST: api/Estado
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<EstadoDto>> PostEstado(EstadoDto estadoDto)
+        public async Task<ActionResult<Estado>> PostEstado(Estado estado)
         {
-            var estado = _mapper.Map<Estado>(estadoDto);
-            estado.CreatedAt = DateTime.UtcNow;
-
             _context.Estados.Add(estado);
             await _context.SaveChangesAsync();
 
-            var resultDto = _mapper.Map<EstadoDto>(estado);
-
-            return CreatedAtAction(nameof(GetEstado), new { id = estado.Id }, resultDto);
+            return CreatedAtAction("GetEstado", new { id = estado.Id }, estado);
         }
 
         // DELETE: api/Estado/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteEstado(ulong id)
+        public async Task<IActionResult> DeleteEstado(uint id)
         {
             var estado = await _context.Estados.FindAsync(id);
             if (estado == null)
+            {
                 return NotFound();
+            }
 
             _context.Estados.Remove(estado);
             await _context.SaveChangesAsync();
@@ -99,7 +100,7 @@ namespace TurneroApi.Controllers
             return NoContent();
         }
 
-        private bool EstadoExists(ulong id)
+        private bool EstadoExists(uint id)
         {
             return _context.Estados.Any(e => e.Id == id);
         }

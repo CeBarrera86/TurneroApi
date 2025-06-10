@@ -10,30 +10,38 @@ public class TurnoConfig : IEntityTypeConfiguration<Turno>
     {
         builder.HasKey(e => e.Id).HasName("PRIMARY");
         builder.ToTable("turnos");
-        builder.HasIndex(e => e.Puesto, "turnos_puesto_foreign");
-        builder.HasIndex(e => e.Ticket, "turnos_ticket_foreign");
+        builder.HasIndex(e => e.EstadoId, "estado_id");
+        builder.HasIndex(e => e.PuestoId, "idx_turno_puesto");
+        builder.HasIndex(e => e.TicketId, "idx_turnos_ticket");
         builder.Property(e => e.Id)
             .HasColumnType("bigint(20) unsigned")
             .HasColumnName("id");
-        builder.Property(e => e.CreatedAt)
-            .HasColumnType("timestamp")
-            .HasColumnName("created_at");
-        builder.Property(e => e.Puesto)
+        builder.Property(e => e.EstadoId)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("estado_id");
+        builder.Property(e => e.FechaFin)
+            .HasColumnType("datetime")
+            .HasColumnName("fecha_fin");
+        builder.Property(e => e.FechaInicio)
+            .HasColumnType("datetime")
+            .HasColumnName("fecha_inicio");
+        builder.Property(e => e.PuestoId)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("puesto_id");
+        builder.Property(e => e.TicketId)
             .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("puesto");
-        builder.Property(e => e.Ticket)
-            .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("ticket");
-        builder.Property(e => e.UpdatedAt)
-            .HasColumnType("timestamp")
-            .HasColumnName("updated_at");
+            .HasColumnName("ticket_id");
+        builder.HasOne(d => d.EstadoNavigation).WithMany(p => p.Turno)
+            .HasForeignKey(d => d.EstadoId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("turnos_ibfk_3");
         builder.HasOne(d => d.PuestoNavigation).WithMany(p => p.Turno)
-            .HasForeignKey(d => d.Puesto)
+            .HasForeignKey(d => d.PuestoId)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("turnos_puesto_foreign");
+            .HasConstraintName("turnos_ibfk_1");
         builder.HasOne(d => d.TicketNavigation).WithMany(p => p.Turno)
-            .HasForeignKey(d => d.Ticket)
+            .HasForeignKey(d => d.TicketId)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("turnos_ticket_foreign");
+            .HasConstraintName("turnos_ibfk_2");
     }
 }

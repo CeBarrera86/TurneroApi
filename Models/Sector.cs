@@ -5,13 +5,14 @@ namespace TurneroApi.Models;
 
 public partial class Sector
 {
-    public ulong Id { get; set; }
-    public string Letra { get; set; } = null!;
-    public string Nombre { get; set; } = null!;
+    public uint Id { get; set; }
+    public uint? PadreId { get; set; }
+    public string? Letra { get; set; }
+    public string? Nombre { get; set; }
     public string? Descripcion { get; set; }
-    public DateTime? CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
+    public virtual ICollection<Sector> InversePadre { get; set; } = new List<Sector>();
     public virtual ICollection<Mostrador> Mostrador { get; set; } = new List<Mostrador>();
-    public virtual ICollection<Tarea> Tarea { get; set; } = new List<Tarea>();
-    public virtual ICollection<Ticket> Ticket { get; set; } = new List<Ticket>();
+    public virtual Sector? Padre { get; set; }
+    public virtual ICollection<Ticket> TicketsSectorIdActualNavigation { get; set; } = new List<Ticket>();
+    public virtual ICollection<Ticket> TicketsSectorIdOrigenNavigation { get; set; } = new List<Ticket>();
 }

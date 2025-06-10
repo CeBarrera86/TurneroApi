@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
 using TurneroApi.Models;
-using AutoMapper;
 
 namespace TurneroApi.Controllers
 {
@@ -17,55 +15,44 @@ namespace TurneroApi.Controllers
     public class ClienteController : ControllerBase
     {
         private readonly TurneroDbContext _context;
-        private readonly IMapper _mapper;
 
-        public ClienteController(TurneroDbContext context, IMapper mapper)
+        public ClienteController(TurneroDbContext context)
         {
             _context = context;
-            _mapper = mapper;
         }
 
+        // GET: api/Cliente
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ClienteDto>>> GetClientes()
+        public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
         {
-            var clientes = await _context.Clientes.ToListAsync();
-            var clientesDto = _mapper.Map<List<ClienteDto>>(clientes);
-            return Ok(clientesDto);
+            return await _context.Clientes.ToListAsync();
         }
 
+        // GET: api/Cliente/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ClienteDto>> GetCliente(ulong id)
+        public async Task<ActionResult<Cliente>> GetCliente(ulong id)
         {
             var cliente = await _context.Clientes.FindAsync(id);
 
             if (cliente == null)
+            {
                 return NotFound();
+            }
 
-            return _mapper.Map<ClienteDto>(cliente);
+            return cliente;
         }
 
-        [HttpPost]
-        public async Task<ActionResult<ClienteDto>> PostCliente(ClienteDto clienteDto)
-        {
-            var cliente = _mapper.Map<Cliente>(clienteDto);
-            _context.Clientes.Add(cliente);
-            await _context.SaveChangesAsync();
-
-            var createdDto = _mapper.Map<ClienteDto>(cliente);
-            return CreatedAtAction(nameof(GetCliente), new { id = cliente.Id }, createdDto);
-        }
-
+        // PUT: api/Cliente/5
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutCliente(ulong id, ClienteDto clienteDto)
+        public async Task<IActionResult> PutCliente(ulong id, Cliente cliente)
         {
-            if (id != clienteDto.Id)
+            if (id != cliente.Id)
+            {
                 return BadRequest();
+            }
 
-            var cliente = await _context.Clientes.FindAsync(id);
-            if (cliente == null)
-                return NotFound();
-
-            _mapper.Map(clienteDto, cliente); // Actualiza la entidad con los valores del DTO
+            _context.Entry(cliente).State = EntityState.Modified;
 
             try
             {
@@ -74,19 +61,38 @@ namespace TurneroApi.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 if (!ClienteExists(id))
+                {
                     return NotFound();
-                throw;
+                }
+                else
+                {
+                    throw;
+                }
             }
 
             return NoContent();
         }
 
+        // POST: api/Cliente
+        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        [HttpPost]
+        public async Task<ActionResult<Cliente>> PostCliente(Cliente cliente)
+        {
+            _context.Clientes.Add(cliente);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetCliente", new { id = cliente.Id }, cliente);
+        }
+
+        // DELETE: api/Cliente/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCliente(ulong id)
         {
             var cliente = await _context.Clientes.FindAsync(id);
             if (cliente == null)
+            {
                 return NotFound();
+            }
 
             _context.Clientes.Remove(cliente);
             await _context.SaveChangesAsync();

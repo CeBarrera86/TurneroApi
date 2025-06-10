@@ -10,48 +10,53 @@ public class TicketConfig : IEntityTypeConfiguration<Ticket>
     {
         builder.HasKey(e => e.Id).HasName("PRIMARY");
         builder.ToTable("tickets");
-        builder.HasIndex(e => e.Cliente, "tickets_cliente_foreign");
-        builder.HasIndex(e => e.Estado, "tickets_estado_foreign");
-        builder.HasIndex(e => new { e.Letra, e.Numero, e.FechaTicket }, "tickets_letra_numero_fecha_unique").IsUnique();
-        builder.HasIndex(e => e.Sector, "tickets_sector_foreign");
+        builder.HasIndex(e => e.EstadoId, "estado_id");
+        builder.HasIndex(e => new { e.SectorIdActual, e.EstadoId }, "idx_ticket_sector_estado");
+        builder.HasIndex(e => e.ClienteId, "idx_tickets_cliente");
+        builder.HasIndex(e => new { e.Letra, e.Numero }, "letra").IsUnique();
+        builder.HasIndex(e => e.SectorIdOrigen, "sector_id_origen");
         builder.Property(e => e.Id)
             .HasColumnType("bigint(20) unsigned")
             .HasColumnName("id");
-        builder.Property(e => e.Cliente)
+        builder.Property(e => e.Actualizado)
+            .HasColumnType("datetime")
+            .HasColumnName("actualizado");
+        builder.Property(e => e.ClienteId)
             .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("cliente");
-        builder.Property(e => e.CreatedAt)
-            .HasColumnType("timestamp")
-            .HasColumnName("created_at");
-        builder.Property(e => e.Estado)
-            .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("estado");
-        builder.Property(e => e.FechaTicket)
-            .HasDefaultValueSql("curdate()")
-            .HasColumnName("fecha_ticket");
+            .HasColumnName("cliente_id");
+        builder.Property(e => e.EstadoId)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("estado_id");
+        builder.Property(e => e.Fecha)
+            .HasColumnType("datetime")
+            .HasColumnName("fecha");
         builder.Property(e => e.Letra)
             .HasMaxLength(2)
             .HasColumnName("letra");
         builder.Property(e => e.Numero)
             .HasColumnType("int(10) unsigned")
             .HasColumnName("numero");
-        builder.Property(e => e.Sector)
-            .HasColumnType("bigint(20) unsigned")
-            .HasColumnName("sector");
-        builder.Property(e => e.UpdatedAt)
-            .HasColumnType("timestamp")
-            .HasColumnName("updated_at");
+        builder.Property(e => e.SectorIdActual)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("sector_id_actual");
+        builder.Property(e => e.SectorIdOrigen)
+            .HasColumnType("int(10) unsigned")
+            .HasColumnName("sector_id_origen");
         builder.HasOne(d => d.ClienteNavigation).WithMany(p => p.Ticket)
-            .HasForeignKey(d => d.Cliente)
+            .HasForeignKey(d => d.ClienteId)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("tickets_cliente_foreign");
+            .HasConstraintName("tickets_ibfk_1");
         builder.HasOne(d => d.EstadoNavigation).WithMany(p => p.Ticket)
-            .HasForeignKey(d => d.Estado)
+            .HasForeignKey(d => d.EstadoId)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("tickets_estado_foreign");
-        builder.HasOne(d => d.SectorNavigation).WithMany(p => p.Ticket)
-            .HasForeignKey(d => d.Sector)
+            .HasConstraintName("tickets_ibfk_4");
+        builder.HasOne(d => d.SectorIdActualNavigation).WithMany(p => p.TicketsSectorIdActualNavigation)
+            .HasForeignKey(d => d.SectorIdActual)
             .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("tickets_sector_foreign");
+            .HasConstraintName("tickets_ibfk_3");
+        builder.HasOne(d => d.SectorIdOrigenNavigation).WithMany(p => p.TicketsSectorIdOrigenNavigation)
+            .HasForeignKey(d => d.SectorIdOrigen)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("tickets_ibfk_2");
     }
 }

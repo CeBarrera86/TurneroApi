@@ -16,10 +16,9 @@ public partial class TurneroDbContext : DbContext
     public virtual DbSet<Puesto> Puestos { get; set; }
     public virtual DbSet<Rol> Roles { get; set; }
     public virtual DbSet<Sector> Sectores { get; set; }
-    public virtual DbSet<Tarea> Tareas { get; set; }
     public virtual DbSet<Ticket> Tickets { get; set; }
     public virtual DbSet<Turno> Turnos { get; set; }
-    public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<Usuario> Usuarios { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,11 +33,10 @@ public partial class TurneroDbContext : DbContext
         modelBuilder.ApplyConfiguration(new PuestoConfig());
         modelBuilder.ApplyConfiguration(new RolConfig());
         modelBuilder.ApplyConfiguration(new SectorConfig());
-        modelBuilder.ApplyConfiguration(new TareaConfig());
         modelBuilder.ApplyConfiguration(new TicketConfig());
         modelBuilder.ApplyConfiguration(new TurnoConfig());
-        modelBuilder.ApplyConfiguration(new UserConfig());
-        
+        modelBuilder.ApplyConfiguration(new UsuarioConfig());
+
         OnModelCreatingPartial(modelBuilder);
     }
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

@@ -11,6 +11,7 @@ public class MostradorConfig : IEntityTypeConfiguration<Mostrador>
         builder.HasKey(e => e.Id).HasName("PRIMARY");
         builder.ToTable("mostradores");
         builder.HasIndex(e => new { e.SectorId, e.Numero }, "sector_id").IsUnique();
+        builder.HasIndex(e => e.Ip).IsUnique();
         builder.Property(e => e.Id)
             .HasColumnType("int(10) unsigned")
             .HasColumnName("id");

@@ -9,6 +9,7 @@ public class PuestoDto
     public DateTime? Logout { get; set; }
     public bool? Activo { get; set; }
 
-    public string? UsuarioNombre { get; set; }
-    public uint? MostradorNumero { get; set; }
+    // DTOs de las relaciones para una respuesta más completa
+    public MostradorDto MostradorNavigation { get; set; } = null!;
+    public UsuarioDto UsuarioNavigation { get; set; } = null!;
 }

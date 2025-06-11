@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
+using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -14,95 +11,98 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class MostradorController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IMostradorService _mostradorService;
+        private readonly IMapper _mapper;
 
-        public MostradorController(TurneroDbContext context)
+        public MostradorController(IMostradorService mostradorService, IMapper mapper)
         {
-            _context = context;
+            _mostradorService = mostradorService;
+            _mapper = mapper;
         }
 
         // GET: api/Mostrador
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Mostrador>>> GetMostradores()
+        public async Task<ActionResult<IEnumerable<MostradorDto>>> GetMostradores()
         {
-            return await _context.Mostradores.ToListAsync();
+            var mostradores = await _mostradorService.GetMostradoresAsync();
+            var mostradoresDto = _mapper.Map<IEnumerable<MostradorDto>>(mostradores);
+            return Ok(mostradoresDto);
         }
 
         // GET: api/Mostrador/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Mostrador>> GetMostrador(uint id)
+        public async Task<ActionResult<MostradorDto>> GetMostrador(uint id)
         {
-            var mostrador = await _context.Mostradores.FindAsync(id);
-
+            var mostrador = await _mostradorService.GetMostradorAsync(id);
             if (mostrador == null)
             {
                 return NotFound();
             }
 
-            return mostrador;
+            var mostradorDto = _mapper.Map<MostradorDto>(mostrador);
+            return Ok(mostradorDto);
         }
 
         // PUT: api/Mostrador/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutMostrador(uint id, Mostrador mostrador)
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> PutMostrador(uint id, [FromBody] MostradorActualizarDto mostradorActualizarDto)
         {
-            if (id != mostrador.Id)
+            if (!ModelState.IsValid)
             {
-                return BadRequest();
+                return BadRequest(ModelState);
             }
 
-            _context.Entry(mostrador).State = EntityState.Modified;
+            var (updatedMostrador, errorMessage) = await _mostradorService.UpdateMostradorAsync(id, mostradorActualizarDto);
 
-            try
+            if (updatedMostrador == null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!MostradorExists(id))
+                if (errorMessage == "Mostrador no encontrado." || errorMessage == "Mostrador no encontrado (error de concurrencia).")
                 {
-                    return NotFound();
+                    return NotFound(new { message = errorMessage });
                 }
-                else
-                {
-                    throw;
-                }
+                return BadRequest(new { message = errorMessage });
             }
 
-            return NoContent();
+            var mostradorDto = _mapper.Map<MostradorDto>(updatedMostrador);
+            return Ok(mostradorDto);
         }
 
         // POST: api/Mostrador
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Mostrador>> PostMostrador(Mostrador mostrador)
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<MostradorDto>> PostMostrador([FromBody] MostradorCrearDto mostradorCrearDto)
         {
-            _context.Mostradores.Add(mostrador);
-            await _context.SaveChangesAsync();
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
 
-            return CreatedAtAction("GetMostrador", new { id = mostrador.Id }, mostrador);
+            var mostrador = _mapper.Map<Mostrador>(mostradorCrearDto);
+
+            var (createdMostrador, errorMessage) = await _mostradorService.CreateMostradorAsync(mostrador);
+
+            if (createdMostrador == null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var mostradorDto = _mapper.Map<MostradorDto>(createdMostrador);
+
+            return CreatedAtAction(nameof(GetMostrador), new { id = mostradorDto.Id }, mostradorDto);
         }
 
         // DELETE: api/Mostrador/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteMostrador(uint id)
         {
-            var mostrador = await _context.Mostradores.FindAsync(id);
-            if (mostrador == null)
+            var deleted = await _mostradorService.DeleteMostradorAsync(id);
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Mostradores.Remove(mostrador);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool MostradorExists(uint id)
-        {
-            return _context.Mostradores.Any(e => e.Id == id);
         }
     }
 }

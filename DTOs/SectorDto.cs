@@ -8,5 +8,5 @@ public class SectorDto
     public string? Nombre { get; set; }
     public string? Descripcion { get; set; }
     
-    public string? PadreNombre { get; set; }
+    public SectorDto? Padre { get; set; }
 }

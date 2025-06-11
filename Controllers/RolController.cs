@@ -1,11 +1,8 @@
 using AutoMapper;
-using System.Globalization;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
 using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -14,12 +11,12 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class RolController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IRolService _rolService;
         private readonly IMapper _mapper;
 
-        public RolController(TurneroDbContext context, IMapper mapper)
+        public RolController(IRolService rolService, IMapper mapper)
         {
-            _context = context;
+            _rolService = rolService;
             _mapper = mapper;
         }
 
@@ -27,7 +24,7 @@ namespace TurneroApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<RolDto>>> GetRoles()
         {
-            var roles = await _context.Roles.ToListAsync();
+            var roles = await _rolService.GetRolesAsync();
             var rolesDto = _mapper.Map<IEnumerable<RolDto>>(roles);
             return Ok(rolesDto);
         }
@@ -36,7 +33,7 @@ namespace TurneroApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<RolDto>> GetRol(uint id)
         {
-            var rol = await _context.Roles.FindAsync(id);
+            var rol = await _rolService.GetRolAsync(id);
             if (rol == null)
             {
                 return NotFound();
@@ -51,117 +48,61 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutRol(uint id, [FromBody] RolActualizarDto rolActualizarDto)
         {
-            var rol = await _context.Roles.FindAsync(id);
-            if (rol == null)
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                return BadRequest(ModelState);
             }
 
-            // --- Manejo y Normalización ---
-            string? tipo = null;
-            if (!string.IsNullOrEmpty(rolActualizarDto.Tipo))
-            {
-                tipo = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(rolActualizarDto.Tipo.Trim().Replace(" ", "").ToLowerInvariant());
-            }
+            var (updatedRol, errorMessage) = await _rolService.UpdateRolAsync(id, rolActualizarDto);
 
-            if (!string.IsNullOrEmpty(tipo) && tipo != rol.Tipo)
+            if (updatedRol == null)
             {
-                var tipoExistente = await _context.Roles.FirstOrDefaultAsync(r => r.Tipo == tipo && r.Id != id);
-                if (tipoExistente != null)
+                if (errorMessage == "Rol no encontrado." || errorMessage == "Rol no encontrado (error de concurrencia).")
                 {
-                    return BadRequest(new { message = $"El tipo de rol '{tipo}' ya está en uso por otro rol. Debe ser único." });
+                    return NotFound(new { message = errorMessage });
                 }
-                rol.Tipo = tipo;
+                return BadRequest(new { message = errorMessage });
             }
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!RolExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-            catch (DbUpdateException)
-            {
-                return StatusCode(500, new { message = "Error al actualizar el rol. Asegúrate de que el tipo de rol sea único." });
-            }
-
-            var rolDto = _mapper.Map<RolDto>(rol);
+            var rolDto = _mapper.Map<RolDto>(updatedRol);
             return Ok(rolDto);
         }
 
         // POST: api/Rol
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<RolDto>> PostRol([FromBody] RolCrearDto rolCrearDto) // Recibe RolCrearDto y devuelve RolDto
+        public async Task<ActionResult<RolDto>> PostRol([FromBody] RolCrearDto rolCrearDto)
         {
-            // --- Limpieza y Normalización ---
-            string? tipo = null;
-            if (!string.IsNullOrEmpty(rolCrearDto.Tipo))
+            if (!ModelState.IsValid)
             {
-                tipo = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(rolCrearDto.Tipo.Trim().Replace(" ", "").ToLowerInvariant());
-            }
-
-            // Validación de campo obligatorio
-            if (string.IsNullOrEmpty(tipo))
-            {
-                return BadRequest(new { message = "El tipo de rol no puede estar vacío." });
-            }
-
-            // Validación de unicidad para Tipo
-            var rolExistente = await _context.Roles.FirstOrDefaultAsync(r => r.Tipo == tipo);
-            if (rolExistente != null)
-            {
-                return BadRequest(new { message = $"El tipo de rol '{tipo}' ya está en uso. Debe ser único." });
+                return BadRequest(ModelState);
             }
 
             var rol = _mapper.Map<Rol>(rolCrearDto);
 
-            rol.Tipo = tipo!;
+            var (createdRol, errorMessage) = await _rolService.CreateRolAsync(rol);
 
-            _context.Roles.Add(rol);
-
-            try
+            if (createdRol == null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                return StatusCode(500, new { message = "Error al guardar el rol. Asegúrate de que el tipo de rol sea único." });
+                return BadRequest(new { message = errorMessage });
             }
 
-            var rolDto = _mapper.Map<RolDto>(rol);
+            var rolDto = _mapper.Map<RolDto>(createdRol);
 
             return CreatedAtAction(nameof(GetRol), new { id = rolDto.Id }, rolDto);
         }
 
         // DELETE: api/Rol/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteRol(uint id)
         {
-            var rol = await _context.Roles.FindAsync(id);
-            if (rol == null)
+            var deleted = await _rolService.DeleteRolAsync(id);
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Roles.Remove(rol);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool RolExists(uint id)
-        {
-            return _context.Roles.Any(e => e.Id == id);
         }
     }
 }

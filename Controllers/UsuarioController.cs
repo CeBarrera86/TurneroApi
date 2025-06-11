@@ -1,11 +1,9 @@
+// TurneroApi/Controllers/UsuarioController.cs
 using AutoMapper;
-using System.Globalization;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
 using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -14,12 +12,12 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class UsuarioController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IUsuarioService _usuarioService;
         private readonly IMapper _mapper;
 
-        public UsuarioController(TurneroDbContext context, IMapper mapper)
+        public UsuarioController(IUsuarioService usuarioService, IMapper mapper)
         {
-            _context = context;
+            _usuarioService = usuarioService;
             _mapper = mapper;
         }
 
@@ -27,12 +25,7 @@ namespace TurneroApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetUsuarios(int page = 1, int pageSize = 10)
         {
-            var usuarios = await _context.Usuarios
-                .Include(u => u.RolNavigation)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
+            var usuarios = await _usuarioService.GetUsuariosAsync(page, pageSize);
             var usuariosDto = _mapper.Map<IEnumerable<UsuarioDto>>(usuarios);
             return Ok(usuariosDto);
         }
@@ -41,12 +34,11 @@ namespace TurneroApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<UsuarioDto>> GetUsuario(uint id)
         {
-            var user = await _context.Usuarios
-                .Include(u => u.RolNavigation)
-                .FirstOrDefaultAsync(u => u.Id == id);
-
+            var user = await _usuarioService.GetUsuarioAsync(id);
             if (user == null)
+            {
                 return NotFound();
+            }
 
             var usuarioDto = _mapper.Map<UsuarioDto>(user);
             return Ok(usuarioDto);
@@ -57,83 +49,23 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutUsuario(uint id, [FromBody] UsuarioActualizarDto usuarioActualizarDto)
         {
-            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
-            if (usuario == null)
-                return NotFound();
-
-            // --- Manejo y Normalización de Nombre ---
-            string? nombre = null;
-            if (!string.IsNullOrEmpty(usuarioActualizarDto.Nombre))
+            if (!ModelState.IsValid)
             {
-                nombre = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioActualizarDto.Nombre.Trim().ToLowerInvariant());
-                nombre = Regex.Replace(nombre, @"\s+", " ").Trim();
-            }
-            if (!string.IsNullOrEmpty(nombre) && nombre != usuario.Nombre)
-            {
-                usuario.Nombre = nombre;
+                return BadRequest(ModelState);
             }
 
-            // --- Manejo y Normalización de Apellido ---
-            string? apellido = null;
-            if (!string.IsNullOrEmpty(usuarioActualizarDto.Apellido))
-            {
-                apellido = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioActualizarDto.Apellido.Trim().ToLowerInvariant());
-                apellido = Regex.Replace(apellido, @"\s+", " ").Trim();
-            }
-            if (!string.IsNullOrEmpty(apellido) && apellido != usuario.Apellido)
-            {
-                usuario.Apellido = apellido;
-            }
+            var (updatedUsuario, errorMessage) = await _usuarioService.UpdateUsuarioAsync(id, usuarioActualizarDto);
 
-            // --- Manejo y Normalización de Username ---
-            string? username = null;
-            if (!string.IsNullOrEmpty(usuarioActualizarDto.Username))
+            if (updatedUsuario == null)
             {
-                username = usuarioActualizarDto.Username.Trim().ToLowerInvariant();
-                username = Regex.Replace(username, @"\s+", "");
-            }
-
-            if (!string.IsNullOrEmpty(username) && username != usuario.Username)
-            {
-                var existingUserWithSameUsername = await _context.Usuarios
-                    .FirstOrDefaultAsync(u => u.Username == username && u.Id != id);
-
-                if (existingUserWithSameUsername != null)
+                if (errorMessage == "Usuario no encontrado." || errorMessage == "Usuario no encontrado (error de concurrencia).")
                 {
-                    return BadRequest(new { message = $"El nombre de usuario '{username}' ya está en uso por otro usuario. Debe ser único." });
+                    return NotFound(new { message = errorMessage });
                 }
-                usuario.Username = username;
+                return BadRequest(new { message = errorMessage });
             }
 
-            // --- Manejo de RolId ---
-            if (usuarioActualizarDto.RolId != 0 && usuarioActualizarDto.RolId != usuario.RolId)
-            {
-                var rolExiste = await _context.Roles.AnyAsync(r => r.Id == usuarioActualizarDto.RolId);
-                if (!rolExiste)
-                {
-                    return BadRequest(new { message = $"El RolId '{usuarioActualizarDto.RolId}' proporcionado no es válido." });
-                }
-                usuario.RolId = usuarioActualizarDto.RolId;
-            }
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!UsuarioExists(id))
-                    return NotFound();
-                throw;
-            }
-            catch (DbUpdateException) 
-            {
-                return StatusCode(500, new { message = "Error al actualizar el usuario. Asegúrate de que el nombre de usuario sea único." });
-            }
-
-            await _context.Entry(usuario).Reference(u => u.RolNavigation).LoadAsync();
-            var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
-
+            var usuarioDto = _mapper.Map<UsuarioDto>(updatedUsuario);
             return Ok(usuarioDto);
         }
 
@@ -142,81 +74,21 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<UsuarioDto>> PostUsuario([FromBody] UsuarioCrearDto usuarioCrearDto)
         {
-            // --- Limpieza y Normalización de Datos de Entrada ---
-            string? nombre = null;
-            string? apellido = null;
-            string? username = null;
-
-            if (!string.IsNullOrEmpty(usuarioCrearDto.Nombre))
+            if (!ModelState.IsValid)
             {
-                nombre = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioCrearDto.Nombre.Trim().ToLowerInvariant());
-                nombre = Regex.Replace(nombre, @"\s+", " ").Trim();
-            }
-            
-            if (!string.IsNullOrEmpty(usuarioCrearDto.Apellido))
-            {
-                apellido = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(usuarioCrearDto.Apellido.Trim().ToLowerInvariant());
-                apellido = Regex.Replace(apellido, @"\s+", " ").Trim();
-            }
-            
-            if (!string.IsNullOrEmpty(usuarioCrearDto.Username))
-            {
-                username = usuarioCrearDto.Username.Trim().ToLowerInvariant();
-                username = Regex.Replace(username, @"\s+", "");
-            }
-
-            // Validación de campos obligatorios
-            if (string.IsNullOrEmpty(nombre))
-            {
-                return BadRequest(new { message = "El nombre del usuario no puede estar vacío." });
-            }
-            if (string.IsNullOrEmpty(apellido))
-            {
-                return BadRequest(new { message = "El apellido del usuario no puede estar vacío." });
-            }
-            if (string.IsNullOrEmpty(username))
-            {
-                return BadRequest(new { message = "El nombre de usuario no puede estar vacío." });
-            }
-
-            // Validación de unicidad para Username
-            var usuarioExistente = await _context.Usuarios.FirstOrDefaultAsync(u => u.Username == username);
-            if (usuarioExistente != null)
-            {
-                return BadRequest(new { message = $"El nombre de usuario '{username}' ya está en uso. Debe ser único." });
-            }
-
-            // Validación de RolId
-            if (usuarioCrearDto.RolId == 0)
-            {
-                return BadRequest(new { message = "El RolId proporcionado no es válido (no puede ser 0)." });
-            }
-            var rolExiste = await _context.Roles.AnyAsync(r => r.Id == usuarioCrearDto.RolId);
-            if (!rolExiste)
-            {
-                return BadRequest(new { message = $"El RolId '{usuarioCrearDto.RolId}' proporcionado no es válido." });
+                return BadRequest(ModelState);
             }
 
             var usuario = _mapper.Map<Usuario>(usuarioCrearDto);
 
-            usuario.Nombre = nombre!;
-            usuario.Apellido = apellido!;
-            usuario.Username = username!;
-            usuario.RolId = usuarioCrearDto.RolId;
+            var (createdUsuario, errorMessage) = await _usuarioService.CreateUsuarioAsync(usuario);
 
-            _context.Usuarios.Add(usuario);
-
-            try
+            if (createdUsuario == null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                return StatusCode(500, new { message = "Error al guardar el usuario. Asegúrate de que el nombre de usuario sea único y que no haya otros problemas de la base de datos." });
+                return BadRequest(new { message = errorMessage });
             }
 
-            await _context.Entry(usuario).Reference(u => u.RolNavigation).LoadAsync();
-            var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
+            var usuarioDto = _mapper.Map<UsuarioDto>(createdUsuario);
 
             return CreatedAtAction(nameof(GetUsuario), new { id = usuarioDto.Id }, usuarioDto);
         }
@@ -226,21 +98,12 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteUsuario(uint id)
         {
-            var usuario = await _context.Usuarios.FindAsync(id);
-            if (usuario == null)
+            var deleted = await _usuarioService.DeleteUsuarioAsync(id);
+            if (!deleted)
             {
-                return NotFound();
+                return NotFound(new { message = "No se pudo eliminar el usuario. Puede que no exista o tenga elementos asociados (historial, puestos)." });
             }
-
-            _context.Usuarios.Remove(usuario);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool UsuarioExists(uint id)
-        {
-            return _context.Usuarios.Any(e => e.Id == id);
         }
     }
 }

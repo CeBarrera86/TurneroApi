@@ -1,24 +1,21 @@
 using AutoMapper;
-using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
 using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
 using TurneroApi.Models;
-
 namespace TurneroApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     public class EstadoController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IEstadoService _estadoService;
         private readonly IMapper _mapper;
 
-        public EstadoController(TurneroDbContext context, IMapper mapper)
+        public EstadoController(IEstadoService estadoService, IMapper mapper)
         {
-            _context = context;
+            _estadoService = estadoService;
             _mapper = mapper;
         }
 
@@ -26,7 +23,7 @@ namespace TurneroApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<EstadoDto>>> GetEstados()
         {
-            var estados = await _context.Estados.ToListAsync();
+            var estados = await _estadoService.GetEstadosAsync();
             var estadosDto = _mapper.Map<IEnumerable<EstadoDto>>(estados);
             return Ok(estadosDto);
         }
@@ -35,8 +32,7 @@ namespace TurneroApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<EstadoDto>> GetEstado(uint id)
         {
-            var estado = await _context.Estados.FindAsync(id);
-
+            var estado = await _estadoService.GetEstadoAsync(id);
             if (estado == null)
             {
                 return NotFound();
@@ -51,58 +47,23 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutEstado(uint id, [FromBody] EstadoActualizarDto estadoActualizarDto)
         {
-            var estado = await _context.Estados.FindAsync(id);
-            if (estado == null)
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                return BadRequest(ModelState);
             }
 
-            // --- Manejo de Letra ---
-            string? letra = estadoActualizarDto.Letra?.Trim().ToUpperInvariant();
+            var (updatedEstado, errorMessage) = await _estadoService.UpdateEstadoAsync(id, estadoActualizarDto);
 
-            if (!string.IsNullOrEmpty(letra) && letra != estado.Letra)
+            if (updatedEstado == null)
             {
-                var estadoLetra = await _context.Estados
-                    .FirstOrDefaultAsync(e => e.Letra == letra && e.Id != id);
-
-                if (estadoLetra != null)
+                if (errorMessage == "Estado no encontrado." || errorMessage == "Estado no encontrado (error de concurrencia).")
                 {
-                    return BadRequest(new { message = $"Ya existe un estado con la letra '{letra}'. La letra debe ser única." });
+                    return NotFound(new { message = errorMessage });
                 }
-
-                estado.Letra = letra;
+                return BadRequest(new { message = errorMessage });
             }
 
-            // --- Manejo de Descripción ---
-            string? descripcion = null;
-            if (!string.IsNullOrEmpty(estadoActualizarDto.Descripcion))
-            {
-                descripcion = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(estadoActualizarDto.Descripcion.Trim().ToLowerInvariant());
-                descripcion = System.Text.RegularExpressions.Regex.Replace(descripcion, @"\s+", " ").Trim();
-            }
-
-            if (!string.IsNullOrEmpty(descripcion) && descripcion != estado.Descripcion)
-            {
-                estado.Descripcion = descripcion;
-            }
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!EstadoExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            var estadoDto = _mapper.Map<EstadoDto>(estado);
+            var estadoDto = _mapper.Map<EstadoDto>(updatedEstado);
             return Ok(estadoDto);
         }
 
@@ -111,42 +72,21 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<EstadoDto>> PostEstado([FromBody] EstadoCrearDto estadoCrearDto)
         {
-            string? letra = estadoCrearDto.Letra?.Trim().ToUpperInvariant();
-            string? descripcion = null;
-            if (!string.IsNullOrEmpty(estadoCrearDto.Descripcion))
+            if (!ModelState.IsValid)
             {
-                descripcion = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(estadoCrearDto.Descripcion.Trim().ToLowerInvariant());
-                descripcion = System.Text.RegularExpressions.Regex.Replace(descripcion, @"\s+", " ").Trim();
-            }
-
-            if (string.IsNullOrEmpty(letra))
-            {
-                return BadRequest(new { message = "La letra del estado no puede estar vacía." });
-            }
-
-            var estadoLetra = await _context.Estados.FirstOrDefaultAsync(e => e.Letra == letra);
-            if (estadoLetra != null)
-            {
-                return BadRequest(new { message = $"Ya existe un estado con la letra '{letra}'. La letra debe ser única." });
+                return BadRequest(ModelState);
             }
 
             var estado = _mapper.Map<Estado>(estadoCrearDto);
 
-            estado.Letra = letra;
-            estado.Descripcion = descripcion!;
+            var (createdEstado, errorMessage) = await _estadoService.CreateEstadoAsync(estado);
 
-            _context.Estados.Add(estado);
-
-            try
+            if (createdEstado == null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                return StatusCode(500, new { message = "Error al guardar el estado. Asegúrate de que la letra sea única y que no haya otros problemas de la base de datos." });
+                return BadRequest(new { message = errorMessage });
             }
 
-            var estadoDto = _mapper.Map<EstadoDto>(estado);
+            var estadoDto = _mapper.Map<EstadoDto>(createdEstado);
 
             return CreatedAtAction(nameof(GetEstado), new { id = estadoDto.Id }, estadoDto);
         }
@@ -156,21 +96,12 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteEstado(uint id)
         {
-            var estado = await _context.Estados.FindAsync(id);
-            if (estado == null)
+            var deleted = await _estadoService.DeleteEstadoAsync(id);
+            if (!deleted)
             {
                 return NotFound();
             }
-
-            _context.Estados.Remove(estado);
-            await _context.SaveChangesAsync();
-
             return NoContent();
-        }
-
-        private bool EstadoExists(uint id)
-        {
-            return _context.Estados.Any(e => e.Id == id);
         }
     }
 }

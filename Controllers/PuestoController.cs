@@ -1,11 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AutoMapper;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
+using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
 using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
@@ -14,95 +11,107 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class PuestoController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IPuestoService _puestoService;
+        private readonly IMapper _mapper;
 
-        public PuestoController(TurneroDbContext context)
+        public PuestoController(IPuestoService puestoService, IMapper mapper)
         {
-            _context = context;
+            _puestoService = puestoService;
+            _mapper = mapper;
         }
 
-        // GET: api/Puesto
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Puesto>>> GetPuestos()
-        {
-            return await _context.Puestos.ToListAsync();
-        }
-
-        // GET: api/Puesto/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Puesto>> GetPuesto(uint id)
+        public async Task<ActionResult<PuestoDto>> GetPuesto(uint id)
         {
-            var puesto = await _context.Puestos.FindAsync(id);
-
+            var puesto = await _puestoService.GetPuestoAsync(id);
             if (puesto == null)
             {
                 return NotFound();
             }
-
-            return puesto;
+            var puestoDto = _mapper.Map<PuestoDto>(puesto);
+            return Ok(puestoDto);
         }
 
-        // PUT: api/Puesto/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutPuesto(uint id, Puesto puesto)
-        {
-            if (id != puesto.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(puesto).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!PuestoExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/Puesto
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Puesto>> PostPuesto(Puesto puesto)
+        [Authorize(Roles = "Admin, Usuario")]
+        public async Task<ActionResult<PuestoDto>> PostPuesto([FromBody] PuestoCrearDto puestoCrearDto)
         {
-            _context.Puestos.Add(puesto);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetPuesto", new { id = puesto.Id }, puesto);
-        }
-
-        // DELETE: api/Puesto/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePuesto(uint id)
-        {
-            var puesto = await _context.Puestos.FindAsync(id);
-            if (puesto == null)
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                return BadRequest(ModelState);
             }
 
-            _context.Puestos.Remove(puesto);
-            await _context.SaveChangesAsync();
+            var (createdPuesto, errorMessage) = await _puestoService.CreatePuestoAsync(puestoCrearDto);
 
-            return NoContent();
+            if (createdPuesto == null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var puestoDto = _mapper.Map<PuestoDto>(createdPuesto);
+            return CreatedAtAction(nameof(GetPuesto), new { id = puestoDto.Id }, puestoDto);
         }
 
-        private bool PuestoExists(uint id)
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Admin, Usuario")]
+        public async Task<IActionResult> PutPuesto(uint id, [FromBody] PuestoActualizarDto puestoActualizarDto)
         {
-            return _context.Puestos.Any(e => e.Id == id);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var (updatedPuesto, errorMessage) = await _puestoService.UpdatePuestoAsync(id, puestoActualizarDto);
+
+            if (updatedPuesto == null)
+            {
+                if (errorMessage == "Puesto no encontrado." || errorMessage == "Puesto no encontrado (error de concurrencia).")
+                {
+                    return NotFound(new { message = errorMessage });
+                }
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var puestoDto = _mapper.Map<PuestoDto>(updatedPuesto);
+            return Ok(puestoDto);
+        }
+
+        // POST: api/Puesto/{id}/login (Endpoint específico para registrar el login de un usuario en un puesto)
+        [HttpPost("{id}/login")]
+        // [Authorize] // Cualquier usuario logueado podría iniciar sesión en un puesto
+        public async Task<ActionResult<PuestoDto>> LoginPuesto(uint id, [FromBody] PuestoLoginDto loginDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            // Aquí podríamos obtener el UsuarioId del token JWT si fuera necesario,
+            // pero para flexibilidad lo recibimos en el DTO por ahora.
+            var (loggedInPuesto, errorMessage) = await _puestoService.RegistrarLoginAsync(id, loginDto.UsuarioId);
+
+            if (loggedInPuesto == null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var puestoDto = _mapper.Map<PuestoDto>(loggedInPuesto);
+            return Ok(puestoDto);
+        }
+
+        // POST: api/Puesto/{id}/logout (Endpoint específico para registrar el logout de un usuario de un puesto)
+        [HttpPost("{id}/logout")]
+        // [Authorize] // Cualquier usuario logueado podría cerrar sesión en su puesto
+        public async Task<ActionResult<PuestoDto>> LogoutPuesto(uint id)
+        {
+            var (loggedOutPuesto, errorMessage) = await _puestoService.RegistrarLogoutAsync(id);
+
+            if (loggedOutPuesto == null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var puestoDto = _mapper.Map<PuestoDto>(loggedOutPuesto);
+            return Ok(puestoDto);
         }
     }
 }

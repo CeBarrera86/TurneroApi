@@ -1,5 +1,3 @@
-namespace TurneroApi.DTOs;
-
 public class EstadoDto
 {
     public uint Id { get; set; }

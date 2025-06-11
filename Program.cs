@@ -6,14 +6,40 @@ using System.Text;
 using TurneroApi.Data;
 using AutoMapper;
 using TurneroApi.Mappings;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using TurneroApi.Interfaces;
+using TurneroApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+}).ConfigureApiBehaviorOptions(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var problemDetails = new ValidationProblemDetails(context.ModelState)
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Uno o más errores de validación ocurrieron.",
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+        };
+
+        return new BadRequestObjectResult(problemDetails);
+    };
+});
+
 builder.Services.AddEndpointsApiExplorer();
-// Registra AutoMapper y escanea el assembly en busca de perfiles
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+// --- SERVICIOS ---
+builder.Services.AddScoped<IEstadoService, EstadoService>();
+builder.Services.AddScoped<IMostradorService, MostradorService>();
+builder.Services.AddScoped<IPuestoService, PuestoService>();
+builder.Services.AddScoped<IRolService, RolService>();
+builder.Services.AddScoped<ISectorService, SectorService>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -45,7 +71,7 @@ builder.Services.AddSwaggerGen(c =>
 // Configuración de TurneroDbContext (para la base de datos principal MySQL)
 var turneroConnectionString = builder.Configuration.GetConnectionString("TurneroDb");
 builder.Services.AddDbContext<TurneroDbContext>(options =>
-    options.UseMySql( turneroConnectionString, ServerVersion.AutoDetect(turneroConnectionString) )
+    options.UseMySql(turneroConnectionString, ServerVersion.AutoDetect(turneroConnectionString))
 );
 // Configuración de GeaSeguridadDbContext (para la base de datos externa SQL Server)
 var geaSeguridadConnectionString = builder.Configuration.GetConnectionString("GeaSeguridadDb");

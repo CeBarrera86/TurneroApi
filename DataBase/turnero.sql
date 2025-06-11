@@ -35,7 +35,7 @@ CREATE TABLE sectores (
 CREATE TABLE mostradores (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     numero INT UNSIGNED NOT NULL,
-    ip VARCHAR(15) NOT NULL,
+    ip VARCHAR(15) NOT NULL UNIQUE,
     tipo VARCHAR(10) NULL,
     sector_id INT UNSIGNED NOT NULL,
     FOREIGN KEY (sector_id) REFERENCES sectores(id),

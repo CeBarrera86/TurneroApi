@@ -26,14 +26,35 @@ namespace TurneroApi.Mappings
 
             // Mostrador
             CreateMap<Mostrador, MostradorDto>()
-                .ForMember(dest => dest.SectorNombre, opt => opt.MapFrom(src => src.SectorNavigation.Nombre))
+                .ForMember(dest => dest.SectorNombre, opt => opt.MapFrom(src => src.SectorNavigation != null ? src.SectorNavigation.Nombre : null))
                 .ReverseMap();
+
+            CreateMap<MostradorCrearDto, Mostrador>().ReverseMap();
+
+            CreateMap<MostradorActualizarDto, Mostrador>().ReverseMap();
 
             // Puesto
             CreateMap<Puesto, PuestoDto>()
-                .ForMember(dest => dest.UsuarioNombre, opt => opt.MapFrom(src => src.UsuarioNavigation.Nombre)) // Ajustar si es otro campo
-                .ForMember(dest => dest.MostradorNumero, opt => opt.MapFrom(src => src.MostradorNavigation.Numero))
-                .ReverseMap();
+            .ForMember(dest => dest.MostradorNavigation, opt => opt.MapFrom(src => src.MostradorNavigation))
+            .ForMember(dest => dest.UsuarioNavigation, opt => opt.MapFrom(src => src.UsuarioNavigation));
+        
+            CreateMap<PuestoCrearDto, Puesto>()
+                .ForMember(dest => dest.Historial, opt => opt.Ignore())
+                .ForMember(dest => dest.Turno, opt => opt.Ignore())
+                .ForMember(dest => dest.MostradorNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.UsuarioNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.Login, opt => opt.Ignore())
+                .ForMember(dest => dest.Logout, opt => opt.Ignore())
+                .ForMember(dest => dest.Activo, opt => opt.Ignore());
+
+            CreateMap<PuestoActualizarDto, Puesto>()
+                .ForMember(dest => dest.Historial, opt => opt.Ignore())
+                .ForMember(dest => dest.Turno, opt => opt.Ignore())
+                .ForMember(dest => dest.MostradorNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.UsuarioNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.Login, opt => opt.Ignore())
+                .ForMember(dest => dest.Logout, opt => opt.Ignore())
+                .ForMember(dest => dest.Activo, opt => opt.Ignore());
 
             // Rol
             CreateMap<Rol, RolDto>().ReverseMap();
@@ -44,7 +65,7 @@ namespace TurneroApi.Mappings
 
             // Sector
             CreateMap<Sector, SectorDto>()
-                .ForMember(dest => dest.PadreNombre, opt => opt.MapFrom(src => src.Padre != null ? src.Padre.Nombre : null))
+                .ForMember(dest => dest.Padre, opt => opt.MapFrom(src => src.Padre != null ? src.Padre.Nombre : null))
                 .ReverseMap();
 
             CreateMap<SectorCrearDto, Sector>().ReverseMap();
@@ -65,19 +86,16 @@ namespace TurneroApi.Mappings
             // Usuario
             CreateMap<Usuario, UsuarioDto>()
                 .ForMember(dest => dest.RolTipo, opt => opt.MapFrom(src => src.RolNavigation.Tipo));
-            CreateMap<UsuarioDto, Usuario>();
 
             CreateMap<UsuarioCrearDto, Usuario>()
                 .ForMember(dest => dest.Historial, opt => opt.Ignore())
                 .ForMember(dest => dest.Puesto, opt => opt.Ignore())
                 .ForMember(dest => dest.RolNavigation, opt => opt.Ignore());
-            CreateMap<Usuario, UsuarioCrearDto>();
 
             CreateMap<UsuarioActualizarDto, Usuario>()
                 .ForMember(dest => dest.Historial, opt => opt.Ignore())
                 .ForMember(dest => dest.Puesto, opt => opt.Ignore())
                 .ForMember(dest => dest.RolNavigation, opt => opt.Ignore());
-            CreateMap<Usuario, UsuarioActualizarDto>();
         }
     }
 }

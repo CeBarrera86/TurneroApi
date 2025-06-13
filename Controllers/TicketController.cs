@@ -1,12 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AutoMapper;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
-using TurneroApi.Models;
+using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
 
 namespace TurneroApi.Controllers
 {
@@ -14,95 +11,116 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class TicketController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly ITicketService _ticketService;
+        private readonly IMapper _mapper;
 
-        public TicketController(TurneroDbContext context)
+        public TicketController(ITicketService ticketService, IMapper mapper)
         {
-            _context = context;
+            _ticketService = ticketService;
+            _mapper = mapper;
         }
 
-        // GET: api/Ticket
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ticket>>> GetTickets()
-        {
-            return await _context.Tickets.ToListAsync();
-        }
+        // [HttpGet]
+        // public async Task<ActionResult<IEnumerable<TicketDto>>> GetTickets(int page = 1, int pageSize = 10)
+        // {
+        //     var tickets = await _ticketService.GetTicketsAsync(page, pageSize);
+        //     var ticketsDto = _mapper.Map<IEnumerable<TicketDto>>(tickets);
+        //     return Ok(ticketsDto);
+        // }
 
-        // GET: api/Ticket/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ticket>> GetTicket(ulong id)
+        public async Task<ActionResult<TicketDto>> GetTicket(ulong id)
         {
-            var ticket = await _context.Tickets.FindAsync(id);
-
+            var ticket = await _ticketService.GetTicketAsync(id);
             if (ticket == null)
             {
                 return NotFound();
             }
-
-            return ticket;
+            var ticketDto = _mapper.Map<TicketDto>(ticket);
+            return Ok(ticketDto);
         }
 
-        // PUT: api/Ticket/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutTicket(ulong id, Ticket ticket)
+        // GET: api/Ticket/search?letra=C&numero=0&date=2025-06-12
+        [HttpGet("search")]
+        public async Task<ActionResult<TicketDto>> GetTicketByLetraAndNumeroAndDate([FromQuery] string ticket)
         {
-            if (id != ticket.Id)
+            if (string.IsNullOrWhiteSpace(ticket))
             {
-                return BadRequest();
+                return BadRequest("El parámetro 'ticket' es obligatorio y no puede estar vacío.");
             }
 
-            _context.Entry(ticket).State = EntityState.Modified;
+            string ticketTrim = ticket.Trim();
 
-            try
+            // Separar la parte numérica del texto
+            Match match = Regex.Match(ticketTrim, @"^([A-Za-z]{1,2})\s*(\d+)$");
+            if (!match.Success)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!TicketExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return BadRequest("Formato de ticket inválido. Ejemplos válidos: 'C2', 'R 3', 'Ap5'.");
             }
 
-            return NoContent();
+            string letra = match.Groups[1].Value.ToUpper();
+            uint numero;
+            // Intentar parsear el número
+            if (!uint.TryParse(match.Groups[2].Value, out numero))
+            {
+                return BadRequest("Número de ticket inválido.");
+            }
+
+            var ticketBuscado = await _ticketService.BuscarTicket(letra, numero);
+
+            if (ticketBuscado == null)
+            {
+                return NotFound($"No se encontró ningún ticket con letra '{letra}', número '{numero}'.");
+            }
+
+            var ticketDto = _mapper.Map<TicketDto>(ticketBuscado);
+            return Ok(ticketDto);
         }
 
-        // POST: api/Ticket
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+        // POST: api/Ticket (Creación de un ticket desde una PC pública)
         [HttpPost]
-        public async Task<ActionResult<Ticket>> PostTicket(Ticket ticket)
+        // No [Authorize] aquí, como lo solicitaste.
+        public async Task<ActionResult<TicketDto>> PostTicket([FromBody] TicketCrearDto ticketCrearDto)
         {
-            _context.Tickets.Add(ticket);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetTicket", new { id = ticket.Id }, ticket);
-        }
-
-        // DELETE: api/Ticket/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteTicket(ulong id)
-        {
-            var ticket = await _context.Tickets.FindAsync(id);
-            if (ticket == null)
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                return BadRequest(ModelState);
             }
 
-            _context.Tickets.Remove(ticket);
-            await _context.SaveChangesAsync();
+            var (createdTicket, errorMessage) = await _ticketService.CrearTicket(ticketCrearDto);
 
-            return NoContent();
+            if (createdTicket == null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var ticketDto = _mapper.Map<TicketDto>(createdTicket);
+            return CreatedAtAction(nameof(GetTicket), new { id = ticketDto.Id }, ticketDto);
         }
 
-        private bool TicketExists(ulong id)
+        // PATCH: api/Ticket/5 (Actualización parcial de Estado y SectorIdActual)
+        [HttpPatch("{id}")]
+        [Authorize(Roles = "Admin, Usuario")]
+        public async Task<IActionResult> PatchTicket(ulong id, [FromBody] TicketActualizarDto ticketActualizarDto)
         {
-            return _context.Tickets.Any(e => e.Id == id);
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var (updatedTicket, errorMessage) = await _ticketService.ActualizarTicket(id, ticketActualizarDto);
+
+            if (updatedTicket == null)
+            {
+                if (errorMessage == "Ticket no encontrado.")
+                {
+                    return NotFound(new { message = errorMessage });
+                }
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var ticketDto = _mapper.Map<TicketDto>(updatedTicket);
+            return Ok(ticketDto);
         }
     }
 }

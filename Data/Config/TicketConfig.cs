@@ -13,7 +13,7 @@ public class TicketConfig : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(e => e.EstadoId, "estado_id");
         builder.HasIndex(e => new { e.SectorIdActual, e.EstadoId }, "idx_ticket_sector_estado");
         builder.HasIndex(e => e.ClienteId, "idx_tickets_cliente");
-        builder.HasIndex(e => new { e.Letra, e.Numero }, "letra").IsUnique();
+        builder.HasIndex(e => new { e.Letra, e.Numero, e.Fecha }).IsUnique().HasDatabaseName("unique_ticket_per_day");
         builder.HasIndex(e => e.SectorIdOrigen, "sector_id_origen");
         builder.Property(e => e.Id)
             .HasColumnType("bigint(20) unsigned")
@@ -38,7 +38,8 @@ public class TicketConfig : IEntityTypeConfiguration<Ticket>
             .HasColumnName("numero");
         builder.Property(e => e.SectorIdActual)
             .HasColumnType("int(10) unsigned")
-            .HasColumnName("sector_id_actual");
+            .HasColumnName("sector_id_actual")
+            .IsRequired(false);
         builder.Property(e => e.SectorIdOrigen)
             .HasColumnType("int(10) unsigned")
             .HasColumnName("sector_id_origen");

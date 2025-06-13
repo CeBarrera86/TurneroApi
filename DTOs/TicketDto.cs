@@ -8,13 +8,13 @@ public class TicketDto
     public ulong ClienteId { get; set; }
     public DateTime Fecha { get; set; }
     public uint SectorIdOrigen { get; set; }
-    public uint SectorIdActual { get; set; }
+    public uint? SectorIdActual { get; set; }
     public uint EstadoId { get; set; }
-    public DateTime Actualizado { get; set; }
+    public DateTime? Actualizado { get; set; }
 
     // Nombres representativos opcionales para mostrar en UI
-    public string? ClienteNombre { get; set; }
-    public string? SectorOrigenNombre { get; set; }
-    public string? SectorActualNombre { get; set; }
-    public string? EstadoNombre { get; set; }
+    public ClienteDto ClienteNavigation { get; set; } = null!;
+    public EstadoDto EstadoNavigation { get; set; } = null!;
+    public SectorDto? SectorIdActualNavigation { get; set; } = null!;
+    public SectorDto SectorIdOrigenNavigation { get; set; } = null!;
 }

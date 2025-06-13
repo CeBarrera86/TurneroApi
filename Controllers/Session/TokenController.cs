@@ -6,105 +6,106 @@ using System.Security.Claims;
 using System.Text;
 using TurneroApi.Data;
 using TurneroApi.Models.Session;
-using TurneroApi.Services;
+using TurneroApi.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Linq;
 
-namespace TurneroApi.Controllers;
-
-[ApiController]
-[Route("api/token")]
-public class TokenController : ControllerBase
+namespace TurneroApi.Controllers
 {
-    private readonly IConfiguration _config;
-    private readonly TurneroDbContext _turneroContext;
-    private readonly GeaSeguridadDbContext _geaSeguridadContext;
-    private readonly ILogger<TokenController> _logger;
-
-    public TokenController(IConfiguration config, TurneroDbContext turneroContext, GeaSeguridadDbContext geaSeguridadContext, ILogger<TokenController> logger)
+    [ApiController]
+    [Route("api/token")]
+    public class TokenController : ControllerBase
     {
-        _config = config;
-        _turneroContext = turneroContext;
-        _geaSeguridadContext = geaSeguridadContext;
-        _logger = logger;
-    }
+        private readonly IConfiguration _config;
+        private readonly TurneroDbContext _turneroContext;
+        private readonly ILogger<TokenController> _logger;
+        private readonly IGeaUsuarioService _geaUsuarioService;
 
-    [HttpPost("login")]
-    public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
-    {
-        _logger.LogInformation("Intento de login recibido. Usuario: {Username}, IP Cliente: {ClientIp}",
-        request.Username,
-        request.ClientIp);
-        // 0. Validación básica para evitar excepciones y ataques de tipo null reference
-        if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-            return BadRequest("Credenciales inválidas.");
-
-        // 1. Validar existencia del usuario en GeaSeguridad_Corpico
-        var geaUsuario = await _geaSeguridadContext.GeaUsuarios.FirstOrDefaultAsync(u => u.USU_CODIGO == request.Username);
-        if (geaUsuario == null)
-            return Unauthorized("Usuario no encontrado.");
-
-        // 2. Desencriptar la contraseña almacenada y compararla
-        string decryptedDbPassword = Hasher.Decod(geaUsuario.USU_PASSWORD);
-        if (request.Password != decryptedDbPassword)
-            return Unauthorized("Contraseña incorrecta.");
-
-        // 3. Buscar el mostrador por la IP proporcionada por el cliente
-        var mostrador = await _turneroContext.Mostradores.FirstOrDefaultAsync(m => m.Ip == request.ClientIp);
-        if (mostrador == null)
+        public TokenController(
+            IConfiguration config,
+            TurneroDbContext turneroContext,
+            ILogger<TokenController> logger,
+            IGeaUsuarioService geaUsuarioService)
         {
-            return Unauthorized("IP del mostrador no registrada o inválida.");
+            _config = config;
+            _turneroContext = turneroContext;
+            _logger = logger;
+            _geaUsuarioService = geaUsuarioService;
         }
 
-        // 4. Obtener los detalles del usuario de la base de datos de Turnero
-        var turneroUser = await _turneroContext.Usuarios.Include(u => u.RolNavigation)
-                        .FirstOrDefaultAsync(u => u.Username == request.Username);
-        if (turneroUser == null)
+        [HttpPost("login")]
+        public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
         {
-            return Unauthorized("Usuario no configurado en el sistema de turnos.");
+            _logger.LogInformation("Intento de login recibido. Usuario: {Username}, IP Cliente: {ClientIp}",
+                request.Username,
+                request.ClientIp);
+
+            // 0. Validación básica
+            if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest("Credenciales inválidas.");
+
+            // 1. Obtener usuario desde GeaSeguridad (real o mock)
+            var geaUsuario = await _geaUsuarioService.ObtenerUsuarioAsync(request.Username);
+            if (geaUsuario == null)
+                return Unauthorized("Usuario no encontrado.");
+
+            // 2. Validar contraseña
+            if (!_geaUsuarioService.ValidarPassword(request.Password, geaUsuario.USU_PASSWORD))
+                return Unauthorized("Contraseña incorrecta.");
+
+            // 3. Buscar mostrador por IP
+            var mostrador = await _turneroContext.Mostradores.FirstOrDefaultAsync(m => m.Ip == request.ClientIp);
+            if (mostrador == null)
+                return Unauthorized("IP del mostrador no registrada o inválida.");
+
+            // 4. Obtener usuario en Turnero
+            var turneroUser = await _turneroContext.Usuarios
+                .Include(u => u.RolNavigation)
+                .FirstOrDefaultAsync(u => u.Username == request.Username);
+            if (turneroUser == null)
+                return Unauthorized("Usuario no configurado en el sistema de turnos.");
+
+            // 5. Crear claims
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, turneroUser.Id.ToString()),
+                new Claim(ClaimTypes.Name, turneroUser.Username),
+                new Claim(ClaimTypes.Role, turneroUser.RolNavigation.Tipo)
+            };
+
+            // 6. Validar configuración JWT
+            var jwtKey = _config["Jwt:Key"];
+            var jwtIssuer = _config["Jwt:Issuer"];
+            var jwtAudience = _config["Jwt:Audience"];
+
+            if (string.IsNullOrWhiteSpace(jwtKey) || string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
+                return StatusCode(500, "Configuración JWT incompleta en appsettings.json.");
+
+            if (!int.TryParse(_config["Jwt:DurationInMinutes"], out int duration))
+                duration = 60;
+
+            // 7. Generar token
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: jwtIssuer,
+                audience: jwtAudience,
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(duration),
+                signingCredentials: creds
+            );
+
+            var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+            return Ok(new
+            {
+                token = tokenString,
+                username = turneroUser.Username,
+                name = turneroUser.Nombre,
+                rol = turneroUser.RolNavigation.Tipo,
+                mostradorTipo = mostrador.Tipo,
+                mostradorSector = mostrador.SectorId
+            });
         }
-
-        // 5. Construcción de claims
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, turneroUser.Id.ToString()), // Id del usuario de Turnero
-            new Claim(ClaimTypes.Name, turneroUser.Username),                // username
-            new Claim(ClaimTypes.Role, turneroUser.RolNavigation.Tipo)      // rol (ej. "Administrador", "Operador")
-        };
-
-        // 5. Validar configuración JWT
-        var jwtKey = _config["Jwt:Key"];
-        var jwtIssuer = _config["Jwt:Issuer"];
-        var jwtAudience = _config["Jwt:Audience"];
-
-        if (string.IsNullOrWhiteSpace(jwtKey) || string.IsNullOrWhiteSpace(jwtIssuer) || string.IsNullOrWhiteSpace(jwtAudience))
-            return StatusCode(500, "Configuración JWT incompleta en appsettings.json.");
-
-        if (!int.TryParse(_config["Jwt:DurationInMinutes"], out int duration))
-            duration = 60;
-
-        // 6. Generar token
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: jwtIssuer,
-            audience: jwtAudience,
-            claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(duration), // Duración configurable
-            signingCredentials: creds
-        );
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return Ok(new
-        {
-            token = tokenString,
-            username = turneroUser.Username,
-            name = turneroUser.Nombre,
-            rol = turneroUser.RolNavigation.Tipo,
-            mostradorTipo = mostrador.Tipo,
-            mostradorSector = mostrador.SectorId
-        });
     }
 }

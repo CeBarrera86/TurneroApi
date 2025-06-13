@@ -9,6 +9,7 @@ namespace TurneroApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class MostradorController : ControllerBase
     {
         private readonly IMostradorService _mostradorService;

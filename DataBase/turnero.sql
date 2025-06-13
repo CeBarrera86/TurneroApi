@@ -67,16 +67,16 @@ CREATE TABLE tickets (
     letra VARCHAR(2) NOT NULL CHECK (letra REGEXP '^[A-Z]{1,2}$'),
     numero INT UNSIGNED NOT NULL,
     cliente_id BIGINT UNSIGNED NOT NULL,
-    fecha DATETIME NOT NULL,
+    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     sector_id_origen INT UNSIGNED NOT NULL,
-    sector_id_actual INT UNSIGNED NOT NULL,
+    sector_id_actual INT UNSIGNED NULL,
     estado_id INT UNSIGNED NOT NULL,
-    actualizado DATETIME NOT NULL,
+    actualizado DATETIME NULL,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     FOREIGN KEY (sector_id_origen) REFERENCES sectores(id),
     FOREIGN KEY (sector_id_actual) REFERENCES sectores(id),
     FOREIGN KEY (estado_id) REFERENCES estados(id),
-    UNIQUE (letra, numero)
+    UNIQUE (letra, numero, fecha)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: turnos

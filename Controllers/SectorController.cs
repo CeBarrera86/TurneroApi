@@ -9,6 +9,7 @@ namespace TurneroApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class SectorController : ControllerBase
     {
         private readonly ISectorService _sectorService;

@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using TurneroApi.Interfaces;
 using TurneroApi.Services;
+using TurneroApi.Services.Mocks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,11 +35,21 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // --- SERVICIOS ---
+if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("MockLogin:Enable"))
+{
+    builder.Services.AddScoped<IGeaUsuarioService, MockGeaUsuarioService>();
+}
+else
+{
+    builder.Services.AddScoped<IGeaUsuarioService, GeaUsuarioService>();
+}
+
 builder.Services.AddScoped<IEstadoService, EstadoService>();
 builder.Services.AddScoped<IMostradorService, MostradorService>();
 builder.Services.AddScoped<IPuestoService, PuestoService>();
 builder.Services.AddScoped<IRolService, RolService>();
 builder.Services.AddScoped<ISectorService, SectorService>();
+builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 builder.Services.AddSwaggerGen(c =>

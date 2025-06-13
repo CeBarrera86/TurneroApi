@@ -74,11 +74,40 @@ namespace TurneroApi.Mappings
 
             // Ticket
             CreateMap<Ticket, TicketDto>()
-                .ForMember(dest => dest.ClienteNombre, opt => opt.MapFrom(src => src.ClienteNavigation.Titular))
-                .ForMember(dest => dest.SectorOrigenNombre, opt => opt.MapFrom(src => src.SectorIdOrigenNavigation.Nombre))
-                .ForMember(dest => dest.SectorActualNombre, opt => opt.MapFrom(src => src.SectorIdActualNavigation.Nombre))
-                .ForMember(dest => dest.EstadoNombre, opt => opt.MapFrom(src => src.EstadoNavigation.Descripcion));
-            CreateMap<TicketDto, Ticket>();
+                .ForMember(dest => dest.ClienteNavigation, opt => opt.MapFrom(src => src.ClienteNavigation))
+                .ForMember(dest => dest.EstadoNavigation, opt => opt.MapFrom(src => src.EstadoNavigation))
+                .ForMember(dest => dest.SectorIdActualNavigation, opt => opt.MapFrom(src => src.SectorIdActualNavigation))
+                .ForMember(dest => dest.SectorIdOrigenNavigation, opt => opt.MapFrom(src => src.SectorIdOrigenNavigation));
+
+            CreateMap<TicketCrearDto, Ticket>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Numero, opt => opt.Ignore())
+                .ForMember(dest => dest.Fecha, opt => opt.Ignore())
+                .ForMember(dest => dest.Actualizado, opt => opt.Ignore())
+                .ForMember(dest => dest.SectorIdActual, opt => opt.Ignore())
+                .ForMember(dest => dest.EstadoId, opt => opt.Ignore())
+                .ForMember(dest => dest.Historial, opt => opt.Ignore())
+                .ForMember(dest => dest.Turno, opt => opt.Ignore())
+                .ForMember(dest => dest.ClienteNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.EstadoNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.SectorIdActualNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.SectorIdOrigenNavigation, opt => opt.Ignore());
+
+            CreateMap<TicketActualizarDto, Ticket>()
+                .ForMember(dest => dest.Id, opt => opt.Ignore())
+                .ForMember(dest => dest.Letra, opt => opt.Ignore())
+                .ForMember(dest => dest.Numero, opt => opt.Ignore())
+                .ForMember(dest => dest.ClienteId, opt => opt.Ignore())
+                .ForMember(dest => dest.Fecha, opt => opt.Ignore())
+                .ForMember(dest => dest.SectorIdOrigen, opt => opt.Ignore())
+                .ForMember(dest => dest.Actualizado, opt => opt.Ignore())
+                .ForMember(dest => dest.Historial, opt => opt.Ignore())
+                .ForMember(dest => dest.Turno, opt => opt.Ignore())
+                .ForMember(dest => dest.ClienteNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.EstadoNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.SectorIdActualNavigation, opt => opt.Ignore())
+                .ForMember(dest => dest.SectorIdOrigenNavigation, opt => opt.Ignore())
+                .ForAllMembers(opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             // Turno
             CreateMap<Turno, TurnoDto>().ReverseMap();

@@ -18,18 +18,18 @@ namespace TurneroApi.Controllers
         private readonly IConfiguration _config;
         private readonly TurneroDbContext _turneroContext;
         private readonly ILogger<TokenController> _logger;
-        private readonly IGeaUsuarioService _geaUsuarioService;
+        private readonly IGeaSeguridadService _geaSeguridadService;
 
         public TokenController(
             IConfiguration config,
             TurneroDbContext turneroContext,
             ILogger<TokenController> logger,
-            IGeaUsuarioService geaUsuarioService)
+            IGeaSeguridadService geaSeguridadService)
         {
             _config = config;
             _turneroContext = turneroContext;
             _logger = logger;
-            _geaUsuarioService = geaUsuarioService;
+            _geaSeguridadService = geaSeguridadService;
         }
 
         [HttpPost("login")]
@@ -44,12 +44,12 @@ namespace TurneroApi.Controllers
                 return BadRequest("Credenciales inválidas.");
 
             // 1. Obtener usuario desde GeaSeguridad (real o mock)
-            var geaUsuario = await _geaUsuarioService.ObtenerUsuarioAsync(request.Username);
+            var geaUsuario = await _geaSeguridadService.ObtenerUsuarioAsync(request.Username);
             if (geaUsuario == null)
                 return Unauthorized("Usuario no encontrado.");
 
             // 2. Validar contraseña
-            if (!_geaUsuarioService.ValidarPassword(request.Password, geaUsuario.USU_PASSWORD))
+            if (!_geaSeguridadService.ValidarPassword(request.Password, geaUsuario.USU_PASSWORD))
                 return Unauthorized("Contraseña incorrecta.");
 
             // 3. Buscar mostrador por IP

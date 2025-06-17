@@ -38,17 +38,18 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 var geaMode = builder.Configuration["GeaSettings:Modo"];
 if (geaMode == "Mock")
 {
-    builder.Services.AddScoped<IGeaUsuarioService, MockGeaUsuarioService>();
+    builder.Services.AddScoped<IGeaSeguridadService, MockGeaSeguridadService>();
     builder.Logging.AddConsole();
     builder.Logging.SetMinimumLevel(LogLevel.Information);
-    builder.Logging.AddFilter("TurneroApi.Services.Mocks.MockGeaUsuarioService", LogLevel.Information);
+    builder.Logging.AddFilter("TurneroApi.Services.Mocks.MockGeaSeguridadService", LogLevel.Information);
 }
 else
 {
-    builder.Services.AddScoped<IGeaUsuarioService, GeaUsuarioService>();
+    builder.Services.AddScoped<IGeaSeguridadService, GeaSeguridadService>();
 }
 
 builder.Services.AddScoped<IClienteService, ClienteService>();
+builder.Services.AddScoped<IClienteRemotoService, ClienteRemotoService>();
 builder.Services.AddScoped<IEstadoService, EstadoService>();
 builder.Services.AddScoped<IHistorialService, HistorialService>();
 builder.Services.AddScoped<IMostradorService, MostradorService>();
@@ -94,7 +95,12 @@ builder.Services.AddDbContext<TurneroDbContext>(options =>
 // Configuración de GeaSeguridadDbContext (para la base de datos externa SQL Server)
 var geaSeguridadConnectionString = builder.Configuration.GetConnectionString("GeaSeguridadDb");
 builder.Services.AddDbContext<GeaSeguridadDbContext>(options =>
-    options.UseSqlServer(geaSeguridadConnectionString)); // Usa UseSqlServer para SQL Server
+    options.UseSqlServer(geaSeguridadConnectionString));
+
+// Configuración de GeaCorpicoDbContext (para la base de datos GeaCorpico SQL Server)
+var geaCorpicoConnectionString = builder.Configuration.GetConnectionString("GeaCorpicoDb");
+builder.Services.AddDbContext<GeaCorpicoDbContext>(options =>
+    options.UseSqlServer(geaCorpicoConnectionString));
 
 // --- Configuración de Autenticación JWT ---
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

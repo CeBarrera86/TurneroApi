@@ -3,13 +3,13 @@ using TurneroApi.Interfaces;
 
 namespace TurneroApi.Services.Mocks
 {
-    public class MockGeaUsuarioService : IGeaUsuarioService
+    public class MockGeaSeguridadService : IGeaSeguridadService
     {
-        public Task<GeaUsuario?> ObtenerUsuarioAsync(string username)
+        public Task<GeaSeguridad?> ObtenerUsuarioAsync(string username)
         {
             if (username == "cbarrera")
             {
-                return Task.FromResult<GeaUsuario?>(new GeaUsuario
+                return Task.FromResult<GeaSeguridad?>(new GeaSeguridad
                 {
                     USU_CODIGO = "cbarrera",
                     USU_PASSWORD = Hasher.Cod("cesar2025")
@@ -26,7 +26,7 @@ namespace TurneroApi.Services.Mocks
             // }
             else
             {
-                return Task.FromResult<GeaUsuario?>(null);
+                return Task.FromResult<GeaSeguridad?>(null);
             }
         }
 

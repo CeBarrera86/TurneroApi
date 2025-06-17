@@ -5,20 +5,20 @@ using TurneroApi.Interfaces;
 
 namespace TurneroApi.Services
 {
-    public class GeaUsuarioService : IGeaUsuarioService
+    public class GeaSeguridadService : IGeaSeguridadService
     {
         private readonly GeaSeguridadDbContext _context;
 
-        public GeaUsuarioService(GeaSeguridadDbContext context)
+        public GeaSeguridadService(GeaSeguridadDbContext context)
         {
             _context = context;
         }
 
-        public async Task<GeaUsuario?> ObtenerUsuarioAsync(string username)
+        public async Task<GeaSeguridad?> ObtenerUsuarioAsync(string username)
         {
             try
             {
-                return await _context.GeaUsuarios.FirstOrDefaultAsync(u => u.USU_CODIGO == username);
+                return await _context.GeaSeguridad.FirstOrDefaultAsync(u => u.USU_CODIGO == username);
             }
             catch (Exception)
             {

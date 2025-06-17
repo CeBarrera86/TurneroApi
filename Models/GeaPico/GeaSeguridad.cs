@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TurneroApi.Models.GeaPico;
 
-[Table("Usuarios")]
-public class GeaUsuario
+[Table("USUARIOS", Schema = "dbo")]
+public class GeaSeguridad
 {
     [Key]
     [Column("USU_CODIGO")]

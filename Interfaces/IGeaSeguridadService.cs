@@ -2,9 +2,9 @@ using TurneroApi.Models.GeaPico;
 
 namespace TurneroApi.Interfaces
 {
-    public interface IGeaUsuarioService
+    public interface IGeaSeguridadService
     {
-        Task<GeaUsuario?> ObtenerUsuarioAsync(string username);
+        Task<GeaSeguridad?> ObtenerUsuarioAsync(string username);
         bool ValidarPassword(string inputPassword, string encryptedPassword);
     }
 }

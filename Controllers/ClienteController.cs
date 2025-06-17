@@ -1,12 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AutoMapper;
+using Microsoft.AspNetCore.Authorization; // Add if you plan to use authorization
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
-using TurneroApi.Models;
+using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
+using TurneroApi.Models; // If you still need direct model references for some reason
 
 namespace TurneroApi.Controllers
 {
@@ -14,95 +11,99 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class ClienteController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IClienteService _clienteService;
+        private readonly IMapper _mapper;
+        // private readonly IClienteRemotoService _clienteRemotoService; // Si decides usarlo directamente aquí o en el service
 
-        public ClienteController(TurneroDbContext context)
+        public ClienteController(IClienteService clienteService, IMapper mapper /*, IClienteRemotoService clienteRemotoService */)
         {
-            _context = context;
+            _clienteService = clienteService;
+            _mapper = mapper;
+            // _clienteRemotoService = clienteRemotoService;
         }
 
-        // GET: api/Cliente
+        // GET: api/Cliente?page=1&pageSize=10 (opcional, si necesitas listar clientes)
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Cliente>>> GetClientes()
+        [Authorize(Roles = "Admin")] // Probablemente solo Admins pueden listar todos los clientes
+        public async Task<ActionResult<IEnumerable<ClienteDto>>> GetClientes([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            return await _context.Clientes.ToListAsync();
+            var clientes = await _clienteService.GetClientesAsync(page, pageSize);
+            var clientesDto = _mapper.Map<IEnumerable<ClienteDto>>(clientes);
+            return Ok(clientesDto);
         }
 
-        // GET: api/Cliente/5
+        // GET: api/Cliente/{id} (para obtener por ID de la base de datos local)
         [HttpGet("{id}")]
-        public async Task<ActionResult<Cliente>> GetCliente(ulong id)
+        [Authorize(Roles = "Admin, Usuario")] // Puede que sea útil para otros servicios internos
+        public async Task<ActionResult<ClienteDto>> GetCliente(ulong id)
         {
-            var cliente = await _context.Clientes.FindAsync(id);
-
+            var cliente = await _clienteService.GetClienteByIdAsync(id);
             if (cliente == null)
             {
                 return NotFound();
             }
-
-            return cliente;
+            var clienteDto = _mapper.Map<ClienteDto>(cliente);
+            return Ok(clienteDto);
         }
 
-        // PUT: api/Cliente/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutCliente(ulong id, Cliente cliente)
+        // GET: api/Cliente/dni/{dni} (el endpoint principal para buscar clientes)
+        [HttpGet("dni/{dni}")]
+        // [Authorize(Roles = "TotemUser, Admin, Usuario")] // Ajusta los roles para quien usa el totem
+        public async Task<ActionResult<ClienteDto>> GetClienteByDni(string dni)
         {
-            if (id != cliente.Id)
+            if (string.IsNullOrWhiteSpace(dni))
             {
-                return BadRequest();
+                return BadRequest("El DNI no puede estar vacío.");
             }
 
-            _context.Entry(cliente).State = EntityState.Modified;
-
-            try
+            // 1. Buscar en la base de datos local
+            var clienteLocal = await _clienteService.GetClienteByDniAsync(dni);
+            if (clienteLocal != null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ClienteExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return Ok(_mapper.Map<ClienteDto>(clienteLocal));
             }
 
-            return NoContent();
+            // 2. Si no se encuentra localmente, buscar en la base de datos remota
+            // Esta lógica de búsqueda y creación local podría estar en un orquestador o directamente en ClienteService.
+            // Para mantener el controlador delgado, es mejor que el servicio principal maneje la orquestación.
+
+            // Ejemplo conceptual si la orquestación está en el servicio:
+            /*
+            var (cliente, errorMessage) = await _clienteService.GetOrCreateClienteFromRemoteAsync(dni);
+            if (cliente == null)
+            {
+                return NotFound(new { message = errorMessage });
+            }
+            return Ok(_mapper.Map<ClienteDto>(cliente));
+            */
+
+            // Para este ejemplo, si no está localmente, indicamos que no se encontró aquí.
+            // La lógica de buscar en remoto y crear localmente se externalizaría.
+            return NotFound($"Cliente con DNI '{dni}' no encontrado localmente.");
         }
 
-        // POST: api/Cliente
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+
+        // POST: api/Cliente (para crear un cliente, asumimos que solo se usa internamente o por un sistema específico)
         [HttpPost]
-        public async Task<ActionResult<Cliente>> PostCliente(Cliente cliente)
+        [Authorize(Roles = "Admin")] // Solo un administrador o un proceso automatizado puede crear clientes localmente
+        public async Task<ActionResult<ClienteDto>> PostCliente([FromBody] ClienteCrearDto clienteCrearDto)
         {
-            _context.Clientes.Add(cliente);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetCliente", new { id = cliente.Id }, cliente);
-        }
-
-        // DELETE: api/Cliente/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCliente(ulong id)
-        {
-            var cliente = await _context.Clientes.FindAsync(id);
-            if (cliente == null)
+            if (!ModelState.IsValid)
             {
-                return NotFound();
+                return BadRequest(ModelState);
             }
 
-            _context.Clientes.Remove(cliente);
-            await _context.SaveChangesAsync();
+            var (createdCliente, errorMessage) = await _clienteService.CreateClienteAsync(clienteCrearDto);
 
-            return NoContent();
+            if (createdCliente == null)
+            {
+                return BadRequest(new { message = errorMessage });
+            }
+
+            var clienteDto = _mapper.Map<ClienteDto>(createdCliente);
+            return CreatedAtAction(nameof(GetCliente), new { id = clienteDto.Id }, clienteDto);
         }
 
-        private bool ClienteExists(ulong id)
-        {
-            return _context.Clientes.Any(e => e.Id == id);
-        }
+        // Los métodos PUT, PATCH y DELETE son eliminados ya que no se gestionan actualizaciones ni eliminaciones directas de clientes locales.
     }
 }

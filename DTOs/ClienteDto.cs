@@ -1,8 +1,11 @@
-namespace TurneroApi.DTOs;
+using System.ComponentModel.DataAnnotations;
 
-public class ClienteDto
+namespace TurneroApi.DTOs
 {
-    public ulong Id { get; set; }
-    public string Dni { get; set; } = null!;
-    public string Titular { get; set; } = null!;
+    public class ClienteDto
+    {
+        public ulong Id { get; set; }
+        public string Dni { get; set; } = null!;
+        public string Titular { get; set; } = null!;
+    }
 }

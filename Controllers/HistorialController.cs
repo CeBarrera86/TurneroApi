@@ -1,12 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
+using AutoMapper;
+using Microsoft.AspNetCore.Authorization; // Add if you plan to use authorization
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TurneroApi.Data;
-using TurneroApi.Models;
+using TurneroApi.DTOs;
+using TurneroApi.Interfaces;
+using TurneroApi.Models; // If you still need direct model references for some reason
 
 namespace TurneroApi.Controllers
 {
@@ -14,95 +11,63 @@ namespace TurneroApi.Controllers
     [ApiController]
     public class HistorialController : ControllerBase
     {
-        private readonly TurneroDbContext _context;
+        private readonly IHistorialService _historialService;
+        private readonly IMapper _mapper;
 
-        public HistorialController(TurneroDbContext context)
+        public HistorialController(IHistorialService historialService, IMapper mapper)
         {
-            _context = context;
+            _historialService = historialService;
+            _mapper = mapper;
         }
 
-        // GET: api/Historial
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Historial>>> GetHistoriales()
+        // GET: api/Historial/ticket/{ticketId}?page=1&pageSize=10
+        // Para obtener todas las entradas de historial para un ticket específico
+        [HttpGet("ticket/{ticketId}")]
+        // [Authorize(Roles = "Admin, Usuario")] // Considerar si todos pueden ver el historial
+        public async Task<ActionResult<IEnumerable<HistorialDto>>> GetHistorialByTicket(ulong ticketId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            return await _context.Historiales.ToListAsync();
-        }
-
-        // GET: api/Historial/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Historial>> GetHistorial(ulong id)
-        {
-            var historial = await _context.Historiales.FindAsync(id);
-
-            if (historial == null)
+            var historiales = await _historialService.GetHistorialByTicketIdAsync(ticketId, page, pageSize);
+            if (!historiales.Any())
             {
-                return NotFound();
+                return NotFound($"No se encontró historial para el TicketId '{ticketId}'.");
             }
-
-            return historial;
+            var historialesDto = _mapper.Map<IEnumerable<HistorialDto>>(historiales);
+            return Ok(historialesDto);
         }
 
-        // PUT: api/Historial/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutHistorial(ulong id, Historial historial)
+        // GET: api/Historial/turno/{turnoId}?page=1&pageSize=10
+        // Opcional: Para obtener todas las entradas de historial para un turno específico
+        [HttpGet("turno/{turnoId}")]
+        // [Authorize(Roles = "Admin, Usuario")]
+        public async Task<ActionResult<IEnumerable<HistorialDto>>> GetHistorialByTurno(ulong turnoId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            if (id != historial.Id)
+            var historiales = await _historialService.GetHistorialByTurnoIdAsync(turnoId, page, pageSize);
+            if (!historiales.Any())
             {
-                return BadRequest();
+                return NotFound($"No se encontró historial para el TurnoId '{turnoId}'.");
             }
-
-            _context.Entry(historial).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!HistorialExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
+            var historialesDto = _mapper.Map<IEnumerable<HistorialDto>>(historiales);
+            return Ok(historialesDto);
         }
 
-        // POST: api/Historial
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Historial>> PostHistorial(Historial historial)
+        // No hay GET por ID directo, ni PUT, POST, DELETE si se maneja como un ledger inmutable.
+        // La creación de entradas de historial se realizaría internamente por otros servicios.
+        /*
+        // Ejemplo de cómo OTRO SERVICIO (ej. TicketService o TurnoService) llamaría a HistorialService
+        // Este no sería un endpoint público en HistorialController
+        private async Task LogTicketStateChange(ulong ticketId, uint newEstadoId, uint? puestoId = null, ulong? turnoId = null, uint? usuarioId = null, string? comentarios = null)
         {
-            _context.Historiales.Add(historial);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetHistorial", new { id = historial.Id }, historial);
-        }
-
-        // DELETE: api/Historial/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteHistorial(ulong id)
-        {
-            var historial = await _context.Historiales.FindAsync(id);
-            if (historial == null)
+            var historialCrearDto = new HistorialCrearDto
             {
-                return NotFound();
-            }
-
-            _context.Historiales.Remove(historial);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+                TicketId = ticketId,
+                EstadoId = newEstadoId,
+                PuestoId = puestoId,
+                TurnoId = turnoId,
+                UsuarioId = usuarioId,
+                Comentarios = comentarios
+            };
+            await _historialService.AddHistorialEntryAsync(historialCrearDto);
         }
-
-        private bool HistorialExists(ulong id)
-        {
-            return _context.Historiales.Any(e => e.Id == id);
-        }
+        */
     }
 }

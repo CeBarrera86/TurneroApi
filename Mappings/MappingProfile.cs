@@ -9,7 +9,12 @@ namespace TurneroApi.Mappings
         public MappingProfile()
         {
             // Cliente
-            CreateMap<Cliente, ClienteDto>().ReverseMap();
+            CreateMap<ClienteCrearDto, Cliente>();
+            CreateMap<Cliente, ClienteDto>();
+
+            // Si usas el ClienteRemotoDto para la búsqueda remota, mapea también:
+            // CreateMap<IClienteRemotoService.ClienteRemotoDto, ClienteCrearDto>();
+            // CreateMap<IClienteRemotoService.ClienteRemotoDto, Cliente>();
 
             // Estado
             CreateMap<Estado, EstadoDto>().ReverseMap();
@@ -22,7 +27,14 @@ namespace TurneroApi.Mappings
             CreateMap<Estado, EstadoActualizarDto>();
 
             // Historial
-            CreateMap<Historial, HistorialDto>().ReverseMap();
+            CreateMap<HistorialCrearDto, Historial>();
+
+            CreateMap<Historial, HistorialDto>()
+                .ForMember(dest => dest.TicketNavigation, opt => opt.MapFrom(src => src.TicketNavigation))
+                .ForMember(dest => dest.EstadoNavigation, opt => opt.MapFrom(src => src.EstadoNavigation))
+                .ForMember(dest => dest.PuestoNavigation, opt => opt.MapFrom(src => src.PuestoNavigation))
+                .ForMember(dest => dest.TurnoNavigation, opt => opt.MapFrom(src => src.TurnoNavigation))
+                .ForMember(dest => dest.UsuarioNavigation, opt => opt.MapFrom(src => src.UsuarioNavigation));
 
             // Mostrador
             CreateMap<Mostrador, MostradorDto>()

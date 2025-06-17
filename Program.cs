@@ -44,7 +44,9 @@ else
     builder.Services.AddScoped<IGeaUsuarioService, GeaUsuarioService>();
 }
 
+builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IEstadoService, EstadoService>();
+builder.Services.AddScoped<IHistorialService, HistorialService>();
 builder.Services.AddScoped<IMostradorService, MostradorService>();
 builder.Services.AddScoped<IPuestoService, PuestoService>();
 builder.Services.AddScoped<IRolService, RolService>();

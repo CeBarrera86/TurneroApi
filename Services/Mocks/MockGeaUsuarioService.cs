@@ -7,14 +7,27 @@ namespace TurneroApi.Services.Mocks
     {
         public Task<GeaUsuario?> ObtenerUsuarioAsync(string username)
         {
-            if (username != "cbarrera")
-                return Task.FromResult<GeaUsuario?>(null);
-
-            return Task.FromResult<GeaUsuario?>(new GeaUsuario
+            if (username == "cbarrera")
             {
-                USU_CODIGO = "cbarrera",
-                USU_PASSWORD = Hasher.Cod("cesar2025")
-            });
+                return Task.FromResult<GeaUsuario?>(new GeaUsuario
+                {
+                    USU_CODIGO = "cbarrera",
+                    USU_PASSWORD = Hasher.Cod("cesar2025")
+                });
+            }
+            // Agrega usuario de prueba
+            // else if (username == "ncarracedo")
+            // {
+            //      return Task.FromResult<GeaUsuario?>(new GeaUsuario
+            //     {
+            //         USU_CODIGO = "ncarracedo",
+            //         USU_PASSWORD = Hasher.Cod("noe25")
+            //     });
+            // }
+            else
+            {
+                return Task.FromResult<GeaUsuario?>(null);
+            }
         }
 
         public bool ValidarPassword(string inputPassword, string encryptedPassword)

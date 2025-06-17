@@ -35,9 +35,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // --- SERVICIOS ---
-if (builder.Environment.IsDevelopment() && builder.Configuration.GetValue<bool>("MockLogin:Enable"))
+var geaMode = builder.Configuration["GeaSettings:Modo"];
+if (geaMode == "Mock")
 {
     builder.Services.AddScoped<IGeaUsuarioService, MockGeaUsuarioService>();
+    builder.Logging.AddConsole();
+    builder.Logging.SetMinimumLevel(LogLevel.Information);
+    builder.Logging.AddFilter("TurneroApi.Services.Mocks.MockGeaUsuarioService", LogLevel.Information);
 }
 else
 {

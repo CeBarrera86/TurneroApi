@@ -8,31 +8,27 @@ namespace TurneroApi.Services
     public class GeaUsuarioService : IGeaUsuarioService
     {
         private readonly GeaSeguridadDbContext _context;
-        private readonly string _modoGea;
 
-
-        public GeaUsuarioService(GeaSeguridadDbContext context, IConfiguration configuration)
+        public GeaUsuarioService(GeaSeguridadDbContext context)
         {
             _context = context;
-            _modoGea = configuration["GeaSettings:Modo"]
-                        ?? throw new InvalidOperationException("La configuración 'GeaSettings:Modo' no está definida.");
         }
 
         public async Task<GeaUsuario?> ObtenerUsuarioAsync(string username)
         {
-            return await _context.GeaUsuarios.FirstOrDefaultAsync(u => u.USU_CODIGO == username);
+            try
+            {
+                return await _context.GeaUsuarios.FirstOrDefaultAsync(u => u.USU_CODIGO == username);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
         }
 
         public bool ValidarPassword(string inputPassword, string encryptedPassword)
         {
-            if (_modoGea == "Real")
-            {
-                return inputPassword == Hasher.Decod(encryptedPassword);
-            }
-
-            // Modo Mock: comparar en texto plano
-            return inputPassword == encryptedPassword;
+            return inputPassword == Hasher.Decod(encryptedPassword);
         }
-
     }
 }

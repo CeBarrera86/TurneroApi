@@ -50,6 +50,7 @@ builder.Services.AddScoped<IPuestoService, PuestoService>();
 builder.Services.AddScoped<IRolService, RolService>();
 builder.Services.AddScoped<ISectorService, SectorService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
+builder.Services.AddScoped<ITurnoService, TurnoService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 builder.Services.AddSwaggerGen(c =>

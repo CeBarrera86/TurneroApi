@@ -1,4 +1,4 @@
-namespace TurneroApi.Services;
+namespace TurneroApi.Services.Session;
 
 public static class Hasher
 {

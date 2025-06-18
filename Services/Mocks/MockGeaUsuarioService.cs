@@ -1,5 +1,5 @@
 using TurneroApi.Models.GeaPico;
-using TurneroApi.Interfaces;
+using TurneroApi.Interfaces.GeaPico;
 
 namespace TurneroApi.Services.Mocks
 {
@@ -12,7 +12,7 @@ namespace TurneroApi.Services.Mocks
                 return Task.FromResult<GeaSeguridad?>(new GeaSeguridad
                 {
                     USU_CODIGO = "cbarrera",
-                    USU_PASSWORD = Hasher.Cod("cesar2025")
+                    USU_PASSWORD = Session.Hasher.Cod("cesar2025")
                 });
             }
             // Agrega usuario de prueba
@@ -32,7 +32,7 @@ namespace TurneroApi.Services.Mocks
 
         public bool ValidarPassword(string inputPassword, string encryptedPassword)
         {
-            return inputPassword == Hasher.Decod(encryptedPassword);
+            return inputPassword == Session.Hasher.Decod(encryptedPassword);
         }
     }
 }

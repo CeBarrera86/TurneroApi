@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.Models.GeaPico;
-using TurneroApi.Interfaces;
+using TurneroApi.Interfaces.GeaPico;
 
-namespace TurneroApi.Services
+namespace TurneroApi.Services.GeaPico
 {
     public class GeaSeguridadService : IGeaSeguridadService
     {
@@ -28,7 +28,7 @@ namespace TurneroApi.Services
 
         public bool ValidarPassword(string inputPassword, string encryptedPassword)
         {
-            return inputPassword == Hasher.Decod(encryptedPassword);
+            return inputPassword == Session.Hasher.Decod(encryptedPassword);
         }
     }
 }

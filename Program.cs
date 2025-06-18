@@ -1,15 +1,17 @@
-using Microsoft.EntityFrameworkCore;
+using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using TurneroApi.Data;
-using AutoMapper;
-using TurneroApi.Mappings;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
 using TurneroApi.Interfaces;
+using TurneroApi.Interfaces.GeaPico;
+using TurneroApi.Mappings;
 using TurneroApi.Services;
+using TurneroApi.Services.GeaPico;
 using TurneroApi.Services.Mocks;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,14 +35,14 @@ builder.Services.AddControllers(options =>
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Logging.AddConsole();
+builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // --- SERVICIOS ---
 var geaMode = builder.Configuration["GeaSettings:Modo"];
 if (geaMode == "Mock")
 {
     builder.Services.AddScoped<IGeaSeguridadService, MockGeaSeguridadService>();
-    builder.Logging.AddConsole();
-    builder.Logging.SetMinimumLevel(LogLevel.Information);
     builder.Logging.AddFilter("TurneroApi.Services.Mocks.MockGeaSeguridadService", LogLevel.Information);
 }
 else

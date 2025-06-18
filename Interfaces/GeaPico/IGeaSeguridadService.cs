@@ -1,6 +1,6 @@
 using TurneroApi.Models.GeaPico;
 
-namespace TurneroApi.Interfaces
+namespace TurneroApi.Interfaces.GeaPico
 {
     public interface IGeaSeguridadService
     {

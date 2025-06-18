@@ -6,7 +6,7 @@ using System.Security.Claims;
 using System.Text;
 using TurneroApi.Data;
 using TurneroApi.Models.Session;
-using TurneroApi.Interfaces;
+using TurneroApi.Interfaces.GeaPico;
 using Microsoft.Extensions.Logging;
 
 namespace TurneroApi.Controllers

@@ -38,6 +38,23 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 
+// --- CORS SERVICES ---
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(
+        policy =>
+        {
+            // IMPORTANT: Replace "http://localhost:3000" with the actual URL of your React app.
+            // If your React app is running on a different port (e.g., 5173 for Vite),
+            // you must use that specific port.
+            // For development, you might use AllowAnyOrigin() for quick testing,
+            // but NEVER in production due to security risks.
+            policy.WithOrigins("http://localhost:5173") // Example for Create React App
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 // --- SERVICIOS ---
 var geaMode = builder.Configuration["GeaSettings:Modo"];
 if (geaMode == "Mock")
@@ -141,6 +158,8 @@ else
 app.UseHttpsRedirection();
 
 app.UseRouting();
+
+app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();

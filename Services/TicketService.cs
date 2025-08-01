@@ -40,11 +40,22 @@ namespace TurneroApi.Services
 
         public async Task<(Ticket? ticket, string? errorMessage)> CrearTicket(TicketCrearDto ticketCrearDto)
         {
-            string letra = ticketCrearDto.Letra.ToUpper();
+            // 1. Obtener el sector de origen para derivar la letra
+            var sectorOrigen = await _context.Sectores.FirstOrDefaultAsync(s => s.Id == ticketCrearDto.SectorIdOrigen);
+            if (sectorOrigen == null)
+            {
+                return (null, $"El SectorIdOrigen '{ticketCrearDto.SectorIdOrigen}' proporcionado no es válido.");
+            }
+            if (string.IsNullOrWhiteSpace(sectorOrigen.Letra))
+            {
+                return (null, $"El sector '{sectorOrigen.Nombre}' (ID: {sectorOrigen.Id}) no tiene una letra asignada.");
+            }
+
+            string letra = sectorOrigen.Letra.ToUpper(); // Derivar la letra del sector
             var today = DateTime.Today;
             uint numero = 0; // Empieza en 0 cada día
 
-            // Validaciones
+            // Validaciones existentes
             var clienteExiste = await _context.Clientes.AnyAsync(c => c.Id == ticketCrearDto.ClienteId);
             if (!clienteExiste)
             {
@@ -64,21 +75,15 @@ namespace TurneroApi.Services
                 return (null, $"Ya existe un ticket con la combinación Letra '{letra}' y Número '{numero}' para la fecha actual. Intente nuevamente.");
             }
 
-            var sectorOrigenExiste = await _context.Sectores.AnyAsync(s => s.Id == ticketCrearDto.SectorIdOrigen);
-            if (!sectorOrigenExiste)
-            {
-                return (null, $"El SectorIdOrigen '{ticketCrearDto.SectorIdOrigen}' proporcionado no es válido.");
-            }
-
             var estadoDisponible = await _context.Estados.FirstOrDefaultAsync(e => e.Id == 4 && e.Descripcion == "DISPONIBLE");
             if (estadoDisponible == null)
             {
                 return (null, "El estado 'DISPONIBLE' (ID 4) no está configurado en la base de datos.");
             }
 
-            var ticket = _mapper.Map<Ticket>(ticketCrearDto);
+            var ticket = _mapper.Map<Ticket>(ticketCrearDto); // Mapea las propiedades disponibles
 
-            ticket.Letra = letra;
+            ticket.Letra = letra; // Asigna la letra derivada
             ticket.Numero = numero;
             ticket.ClienteId = ticketCrearDto.ClienteId;
             ticket.Fecha = DateTime.Now;

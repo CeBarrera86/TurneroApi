@@ -76,9 +76,7 @@ namespace TurneroApi.Mappings
             CreateMap<RolActualizarDto, Rol>().ReverseMap();
 
             // Sector
-            CreateMap<Sector, SectorDto>()
-                .ForMember(dest => dest.Padre, opt => opt.MapFrom(src => src.Padre != null ? src.Padre.Nombre : null))
-                .ReverseMap();
+            CreateMap<Sector, SectorDto>().ReverseMap();
 
             CreateMap<SectorCrearDto, Sector>().ReverseMap();
 

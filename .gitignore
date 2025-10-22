@@ -4,5 +4,4 @@ DataBase/clientes.sql
 DataBase/turnero_seeder.sql
 .vs/
 *.user
-appsettings.Development.json
-appsettings.json
+appsettings.*.json

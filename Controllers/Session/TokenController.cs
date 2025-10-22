@@ -37,7 +37,7 @@ namespace TurneroApi.Controllers
     {
       var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
       _logger.LogInformation("IP detectada desde la solicitud: {ClientIp}", clientIp);
-      
+
       _logger.LogInformation("Intento de login recibido. Usuario: {Username}, IP detectada: {ClientIp}",
           request.Username,
           clientIp);
@@ -79,28 +79,69 @@ namespace TurneroApi.Controllers
       if (!int.TryParse(_config["Jwt:DurationInMinutes"], out int duration))
         duration = 60;
 
-      var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-      var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+      // var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+      // var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-      var token = new JwtSecurityToken(
-          issuer: jwtIssuer,
-          audience: jwtAudience,
-          claims: claims,
-          expires: DateTime.UtcNow.AddMinutes(duration),
-          signingCredentials: creds
-      );
+      // var token = new JwtSecurityToken(
+      //     issuer: jwtIssuer,
+      //     audience: jwtAudience,
+      //     claims: claims,
+      //     expires: DateTime.UtcNow.AddMinutes(duration),
+      //     signingCredentials: creds
+      // );
 
-      var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+      // var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
 
-      return Ok(new
+      // var responsePayload = new
+      // {
+      //   token = tokenString,
+      //   username = turneroUser.Username,
+      //   name = turneroUser.Nombre,
+      //   rol = turneroUser.RolNavigation.Tipo,
+      //   mostradorTipo = mostrador.Tipo,
+      //   mostradorSector = mostrador.SectorId
+      // };
+
+      // _logger.LogInformation("Login exitoso. Respuesta generada: {@Response}", responsePayload);
+
+      // return Ok(responsePayload);
+
+      try
       {
-        token = tokenString,
-        username = turneroUser.Username,
-        name = turneroUser.Nombre,
-        rol = turneroUser.RolNavigation.Tipo,
-        mostradorTipo = mostrador.Tipo,
-        mostradorSector = mostrador.SectorId
-      });
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: jwtIssuer,
+            audience: jwtAudience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(duration),
+            signingCredentials: creds
+        );
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        var responsePayload = new
+        {
+          token = tokenString,
+          username = turneroUser.Username,
+          name = turneroUser.Nombre,
+          rol = turneroUser.RolNavigation.Tipo,
+          mostradorTipo = mostrador.Tipo,
+          mostradorSector = mostrador.SectorId
+        };
+
+        _logger.LogInformation("Login exitoso. Respuesta generada: {@Response}", responsePayload);
+
+        return Ok(responsePayload);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Error inesperado al generar el token o construir la respuesta.");
+        return StatusCode(500, "Error interno al generar el token.");
+      }
+
+
     }
 
   }

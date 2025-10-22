@@ -28,6 +28,7 @@ CREATE TABLE sectores (
     letra VARCHAR(3) NULL UNIQUE CHECK (letra REGEXP '^[A-Z]{1,3}$'),
     nombre VARCHAR(50) NULL UNIQUE,
     descripcion VARCHAR(120) NULL,
+    activo TINYINT(1) NOT NULL DEFAULT 1,
     FOREIGN KEY (padre_id) REFERENCES sectores(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

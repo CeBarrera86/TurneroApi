@@ -14,6 +14,7 @@ public class SectorCrearDto
 
     [StringLength(120, ErrorMessage = "La descripción no puede exceder los 120 caracteres.")]
     public string? Descripcion { get; set; }
+    public bool Activo { get; set; } = true;
 
     public uint? PadreId { get; set; }
 }

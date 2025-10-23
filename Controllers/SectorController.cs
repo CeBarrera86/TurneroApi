@@ -93,17 +93,27 @@ namespace TurneroApi.Controllers
             return CreatedAtAction(nameof(GetSector), new { id = sectorDto.Id }, sectorDto);
         }
 
+        [HttpGet("activos")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivos()
+        {
+            var sectores = await _sectorService.GetSectoresActivosAsync();
+            var sectoresDto = _mapper.Map<IEnumerable<SectorDto>>(sectores);
+            return Ok(sectoresDto);
+        }
+
         // DELETE: api/Sector/5
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteSector(uint id)
         {
-            var deleted = await _sectorService.DeleteSectorAsync(id);
+            var (deleted, errorMessage) = await _sectorService.DeleteSectorAsync(id);
             if (!deleted)
             {
-                return NotFound(new { message = "No se pudo eliminar el sector. Puede que no exista o tenga elementos asociados." });
+                return NotFound(new { message = errorMessage });
             }
             return NoContent();
+
         }
     }
 }

@@ -19,6 +19,10 @@ public class SectorConfig : IEntityTypeConfiguration<Sector>
         builder.Property(e => e.Descripcion)
             .HasMaxLength(120)
             .HasColumnName("descripcion");
+        builder.Property(e => e.Activo)
+            .HasColumnType("tinyint(1)")
+            .HasColumnName("activo")
+            .IsRequired();
         builder.Property(e => e.Letra)
             .HasMaxLength(3)
             .HasColumnName("letra");

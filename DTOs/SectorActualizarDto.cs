@@ -13,5 +13,7 @@ public class SectorActualizarDto
     [StringLength(120, ErrorMessage = "La descripción no puede exceder los 120 caracteres.")]
     public string? Descripcion { get; set; }
 
+    public bool? Activo { get; set; }
+
     public uint? PadreId { get; set; }
 }

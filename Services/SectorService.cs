@@ -179,6 +179,12 @@ namespace TurneroApi.Services
                 sector.Descripcion = null;
             }
 
+            // Manejo de Activo
+            if (sectorActualizarDto.Activo.HasValue)
+            {
+                sector.Activo = sectorActualizarDto.Activo.Value;
+            }
+
             // Manejo de PadreId
             if (sectorActualizarDto.PadreId.HasValue)
             {
@@ -243,27 +249,37 @@ namespace TurneroApi.Services
             }
         }
 
-        public async Task<bool> DeleteSectorAsync(uint id)
+        // Sectores Activos
+        public async Task<IEnumerable<Sector>> GetSectoresActivosAsync()
+        {
+            return await _context.Sectores
+                .Include(s => s.Padre)
+                .Where(s => s.Activo)
+                .ToListAsync();
+        }
+
+        public async Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(uint id)
         {
             var sector = await _context.Sectores.FindAsync(id);
             if (sector == null)
             {
-                return false;
+                return (false, "El sector no existe.");
             }
 
             if (await _context.Mostradores.AnyAsync(m => m.SectorId == id))
             {
-                return false;
+                return (false, "El sector tiene mostradores asociados y no puede eliminarse.");
             }
 
             if (await _context.Sectores.AnyAsync(s => s.PadreId == id))
             {
-                return false;
+                return (false, "El sector tiene sectores hijos y no puede eliminarse.");
             }
 
             _context.Sectores.Remove(sector);
             await _context.SaveChangesAsync();
-            return true;
+            return (true, null);
         }
+
     }
 }

@@ -9,6 +9,7 @@ namespace TurneroApi.Interfaces
         Task<Sector?> GetSectorAsync(uint id);
         Task<(Sector? sector, string? errorMessage)> CreateSectorAsync(Sector sector);
         Task<(Sector? sector, string? errorMessage)> UpdateSectorAsync(uint id, SectorActualizarDto sectorActualizarDto);
-        Task<bool> DeleteSectorAsync(uint id);
+        Task<IEnumerable<Sector>> GetSectoresActivosAsync();
+        Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(uint id);
     }
 }

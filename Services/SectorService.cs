@@ -39,12 +39,13 @@ namespace TurneroApi.Services
             }
             if (!string.IsNullOrEmpty(sector.Nombre))
             {
-                sector.Nombre = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(sector.Nombre.Trim().ToLowerInvariant());
+                sector.Nombre = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(sector.Nombre.Trim().ToUpperInvariant());
                 sector.Nombre = Regex.Replace(sector.Nombre, @"\s+", " ").Trim();
             }
-            if (!string.IsNullOrEmpty(sector.Descripcion))
+            if (!string.IsNullOrWhiteSpace(sector.Descripcion))
             {
-                sector.Descripcion = sector.Descripcion.Trim().Replace(" ", "").ToUpperInvariant();
+                var textInfo = CultureInfo.InvariantCulture.TextInfo;
+                sector.Descripcion = textInfo.ToTitleCase(sector.Descripcion.Trim().ToLowerInvariant());
             }
 
             // --- Validaciones de Negocio ---
@@ -166,9 +167,11 @@ namespace TurneroApi.Services
             }
 
             // Manejo de Descripción
-            if (!string.IsNullOrEmpty(sectorActualizarDto.Descripcion))
+            if (!string.IsNullOrWhiteSpace(sectorActualizarDto.Descripcion))
             {
-                string cleanedDescripcion = sectorActualizarDto.Descripcion.Trim().Replace(" ", "").ToUpperInvariant();
+                var textInfo = CultureInfo.InvariantCulture.TextInfo;
+                string cleanedDescripcion = textInfo.ToTitleCase(sectorActualizarDto.Descripcion.Trim().ToLowerInvariant());
+
                 if (cleanedDescripcion != sector.Descripcion)
                 {
                     sector.Descripcion = cleanedDescripcion;

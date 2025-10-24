@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TurneroApi.DTOs;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
@@ -98,12 +99,25 @@ namespace TurneroApi.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteRol(uint id)
         {
-            var deleted = await _rolService.DeleteRolAsync(id);
-            if (!deleted)
+            try
             {
-                return NotFound();
+                var deleted = await _rolService.DeleteRolAsync(id);
+                if (!deleted)
+                {
+                    return NotFound();
+                }
+                return NoContent();
             }
-            return NoContent();
+            catch (DbUpdateException ex)
+            {
+                // Esto ocurre cuando el rol está en uso por otra entidad
+                return Conflict(new { mensaje = "No se puede eliminar el rol porque está asignado a una persona." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { mensaje = "Error interno al eliminar el rol." });
+            }
         }
+
     }
 }

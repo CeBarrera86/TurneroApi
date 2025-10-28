@@ -9,6 +9,6 @@ namespace TurneroApi.Interfaces
         Task<Rol?> GetRolAsync(uint id);
         Task<(Rol? rol, string? errorMessage)> CreateRolAsync(Rol rol);
         Task<(Rol? rol, string? errorMessage)> UpdateRolAsync(uint id, RolActualizarDto rolActualizarDto);
-        Task<bool> DeleteRolAsync(uint id);
+        Task<(bool deleted, string? errorMessage)> DeleteRolAsync(uint id);
     }
 }

@@ -58,7 +58,7 @@ namespace TurneroApi.Services
             // 2. Validación de RolId
             if (usuario.RolId == 0)
             {
-                 return (null, "El RolId proporcionado no es válido (no puede ser 0).");
+                return (null, "El RolId proporcionado no es válido (no puede ser 0).");
             }
             var rolExiste = await _context.Roles.AnyAsync(r => r.Id == usuario.RolId);
             if (!rolExiste)

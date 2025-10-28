@@ -20,7 +20,7 @@ namespace TurneroApi.Services
             // Tipos de documento válidos para la búsqueda DNI (1), CI (3), LE (4), LC (5)    
             try
             {
-                var clienteDocumentoGea = await _geaCorpicoContext.GeaCorpicoClienteDocumentos .Include(cd => cd.ClienteGea)
+                var clienteDocumentoGea = await _geaCorpicoContext.GeaCorpicoClienteDocumentos.Include(cd => cd.ClienteGea)
                     .FirstOrDefaultAsync(cd =>
                         cd.CLD_NUMERO_DOCUMENTO == dni &&
                         cd.CLD_EMPRESA == 1 &&

@@ -101,7 +101,7 @@ namespace TurneroApi.Services
             }
 
             var guestClient = await _context.Clientes.FindAsync(GUEST_CLIENT_ID);
-            
+
             return _mapper.Map<ClienteDto>(guestClient);
         }
     }

@@ -7,7 +7,6 @@ using System.Text;
 using TurneroApi.Data;
 using TurneroApi.Models.Session;
 using TurneroApi.Interfaces.GeaPico;
-using Microsoft.Extensions.Logging;
 
 namespace TurneroApi.Controllers
 {
@@ -20,11 +19,7 @@ namespace TurneroApi.Controllers
     private readonly ILogger<TokenController> _logger;
     private readonly IGeaSeguridadService _geaSeguridadService;
 
-    public TokenController(
-        IConfiguration config,
-        TurneroDbContext turneroContext,
-        ILogger<TokenController> logger,
-        IGeaSeguridadService geaSeguridadService)
+    public TokenController(IConfiguration config, TurneroDbContext turneroContext, ILogger<TokenController> logger, IGeaSeguridadService geaSeguridadService)
     {
       _config = config;
       _turneroContext = turneroContext;
@@ -36,11 +31,6 @@ namespace TurneroApi.Controllers
     public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
     {
       var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
-      _logger.LogInformation("IP detectada desde la solicitud: {ClientIp}", clientIp);
-
-      _logger.LogInformation("Intento de login recibido. Usuario: {Username}, IP detectada: {ClientIp}",
-          request.Username,
-          clientIp);
 
       if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
         return BadRequest("Credenciales inválidas.");
@@ -56,9 +46,7 @@ namespace TurneroApi.Controllers
       if (mostrador == null)
         return Unauthorized("IP del mostrador no registrada o inválida.");
 
-      var turneroUser = await _turneroContext.Usuarios
-          .Include(u => u.RolNavigation)
-          .FirstOrDefaultAsync(u => u.Username == request.Username);
+      var turneroUser = await _turneroContext.Usuarios.Include(u => u.RolNavigation).FirstOrDefaultAsync(u => u.Username == request.Username);
       if (turneroUser == null)
         return Unauthorized("Usuario no configurado en el sistema de turnos.");
 
@@ -78,33 +66,6 @@ namespace TurneroApi.Controllers
 
       if (!int.TryParse(_config["Jwt:DurationInMinutes"], out int duration))
         duration = 60;
-
-      // var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
-      // var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-      // var token = new JwtSecurityToken(
-      //     issuer: jwtIssuer,
-      //     audience: jwtAudience,
-      //     claims: claims,
-      //     expires: DateTime.UtcNow.AddMinutes(duration),
-      //     signingCredentials: creds
-      // );
-
-      // var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-      // var responsePayload = new
-      // {
-      //   token = tokenString,
-      //   username = turneroUser.Username,
-      //   name = turneroUser.Nombre,
-      //   rol = turneroUser.RolNavigation.Tipo,
-      //   mostradorTipo = mostrador.Tipo,
-      //   mostradorSector = mostrador.SectorId
-      // };
-
-      // _logger.LogInformation("Login exitoso. Respuesta generada: {@Response}", responsePayload);
-
-      // return Ok(responsePayload);
 
       try
       {
@@ -140,9 +101,6 @@ namespace TurneroApi.Controllers
         _logger.LogError(ex, "Error inesperado al generar el token o construir la respuesta.");
         return StatusCode(500, "Error interno al generar el token.");
       }
-
-
     }
-
   }
 }

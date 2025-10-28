@@ -45,7 +45,7 @@ namespace TurneroApi.Services
             {
                 return (null, $"El mostrador con ID '{puestoCrearDto.MostradorId}' ya está asignado a un puesto activo (Puesto ID: {mostradorActivoExistente.Id}).");
             }
-            
+
             var usuarioActivoExistente = await _context.Puestos
                                                 .FirstOrDefaultAsync(p => p.UsuarioId == puestoCrearDto.UsuarioId && p.Activo == true);
             if (usuarioActivoExistente != null)
@@ -54,7 +54,7 @@ namespace TurneroApi.Services
             }
 
             var puesto = _mapper.Map<Puesto>(puestoCrearDto);
-            
+
             puesto.Activo = true;
             puesto.Login = DateTime.Now;
             puesto.Logout = null;
@@ -156,7 +156,7 @@ namespace TurneroApi.Services
             {
                 return (null, $"El mostrador asignado a este puesto (ID: {puesto.MostradorId}) ya está activo en otro puesto (Puesto ID: {mostradorActivoExistente.Id}).");
             }
-            
+
             var usuarioActivoExistente = await _context.Puestos
                                                 .FirstOrDefaultAsync(p => p.UsuarioId == usuarioId && p.Activo == true && p.Id != puestoId);
             if (usuarioActivoExistente != null)

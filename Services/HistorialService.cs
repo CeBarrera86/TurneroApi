@@ -32,7 +32,7 @@ namespace TurneroApi.Services
                 .Take(pageSize)
                 .ToListAsync();
         }
-        
+
         public async Task<IEnumerable<Historial>> GetHistorialByTurnoIdAsync(ulong turnoId, int page, int pageSize)
         {
             return await _context.Historiales
@@ -98,7 +98,7 @@ namespace TurneroApi.Services
             try
             {
                 await _context.SaveChangesAsync();
-                
+
                 // Cargar navegaciones para el DTO de respuesta, si es necesario
                 await _context.Entry(historial).Reference(h => h.TicketNavigation).LoadAsync();
                 await _context.Entry(historial).Reference(h => h.EstadoNavigation).LoadAsync();

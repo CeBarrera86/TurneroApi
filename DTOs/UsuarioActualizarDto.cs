@@ -14,5 +14,5 @@ public class UsuarioActualizarDto
     public string? Username { get; set; }
 
     [Range(0, uint.MaxValue, ErrorMessage = "El ID del rol debe ser un número positivo o cero.")]
-    public uint RolId { get; set; } 
+    public uint RolId { get; set; }
 }

@@ -11,7 +11,7 @@ public partial class Puesto
     public DateTime? Login { get; set; }
     public DateTime? Logout { get; set; }
     public bool? Activo { get; set; }
-    
+
     public virtual ICollection<Historial> Historial { get; set; } = new List<Historial>();
     public virtual ICollection<Turno> Turno { get; set; } = new List<Turno>();
     public virtual Mostrador MostradorNavigation { get; set; } = null!;

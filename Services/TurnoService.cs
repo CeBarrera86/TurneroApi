@@ -139,15 +139,15 @@ namespace TurneroApi.Services
                 // Si el nuevo estado es ATENDIDO (1), verifica que el puesto no tenga otro turno ATENDIDO.
                 if (newEstadoId == 1)
                 {
-                     var estadoAtendido = await _context.Estados.FirstOrDefaultAsync(e => e.Id == 1 && e.Descripcion == "ATENDIDO");
-                     if (estadoAtendido == null) return (null, "El estado 'ATENDIDO' no está configurado en la base de datos.");
+                    var estadoAtendido = await _context.Estados.FirstOrDefaultAsync(e => e.Id == 1 && e.Descripcion == "ATENDIDO");
+                    if (estadoAtendido == null) return (null, "El estado 'ATENDIDO' no está configurado en la base de datos.");
 
-                     var turnoActivoExistente = await _context.Turnos
-                                                             .AnyAsync(t => t.PuestoId == turno.PuestoId && t.EstadoId == estadoAtendido.Id && t.Id != turno.Id);
-                     if (turnoActivoExistente)
-                     {
-                         return (null, $"El puesto '{turno.PuestoId}' ya tiene otro turno 'ATENDIDO' activo. Finalice el turno actual antes de reactivar uno nuevo.");
-                     }
+                    var turnoActivoExistente = await _context.Turnos
+                                                            .AnyAsync(t => t.PuestoId == turno.PuestoId && t.EstadoId == estadoAtendido.Id && t.Id != turno.Id);
+                    if (turnoActivoExistente)
+                    {
+                        return (null, $"El puesto '{turno.PuestoId}' ya tiene otro turno 'ATENDIDO' activo. Finalice el turno actual antes de reactivar uno nuevo.");
+                    }
                 }
 
                 turno.EstadoId = newEstadoId;

@@ -49,7 +49,7 @@ namespace TurneroApi.Mappings
             CreateMap<Puesto, PuestoDto>()
             .ForMember(dest => dest.MostradorNavigation, opt => opt.MapFrom(src => src.MostradorNavigation))
             .ForMember(dest => dest.UsuarioNavigation, opt => opt.MapFrom(src => src.UsuarioNavigation));
-        
+
             CreateMap<PuestoCrearDto, Puesto>()
                 .ForMember(dest => dest.Historial, opt => opt.Ignore())
                 .ForMember(dest => dest.Turno, opt => opt.Ignore())
@@ -121,10 +121,10 @@ namespace TurneroApi.Mappings
 
             // Turno
             CreateMap<TurnoCrearDto, Turno>();
-            
+
             CreateMap<TurnoActualizarDto, Turno>()
                  .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
-            
+
             CreateMap<Turno, TurnoDto>()
                 .ForMember(dest => dest.PuestoNavigation, opt => opt.MapFrom(src => src.PuestoNavigation))
                 .ForMember(dest => dest.TicketNavigation, opt => opt.MapFrom(src => src.TicketNavigation))

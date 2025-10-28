@@ -94,11 +94,11 @@ namespace TurneroApi.Services
 
             if (!string.IsNullOrEmpty(mostrador.Ip))
             {
-                 mostrador.Ip = mostrador.Ip.Trim();
+                mostrador.Ip = mostrador.Ip.Trim();
             }
             if (!string.IsNullOrEmpty(mostrador.Tipo))
             {
-                 mostrador.Tipo = mostrador.Tipo.Trim().Replace(" ", "").ToUpperInvariant();
+                mostrador.Tipo = mostrador.Tipo.Trim().Replace(" ", "").ToUpperInvariant();
             }
 
             // --- Validaciones de Negocio ---
@@ -126,13 +126,13 @@ namespace TurneroApi.Services
 
             if (mostradorActualizarDto.Numero.HasValue || mostradorActualizarDto.SectorId.HasValue)
             {
-                 var existingMostradorWithNewSectorAndNumber = await _context.Mostradores
-                    .FirstOrDefaultAsync(m => m.SectorId == currentSectorId && m.Numero == currentNumero && m.Id != id);
+                var existingMostradorWithNewSectorAndNumber = await _context.Mostradores
+                   .FirstOrDefaultAsync(m => m.SectorId == currentSectorId && m.Numero == currentNumero && m.Id != id);
 
-                 if (existingMostradorWithNewSectorAndNumber != null)
-                 {
-                     return (null, $"Ya existe un mostrador con el número '{currentNumero}' en el SectorId '{currentSectorId}'. La combinación de Sector y Número debe ser única.");
-                 }
+                if (existingMostradorWithNewSectorAndNumber != null)
+                {
+                    return (null, $"Ya existe un mostrador con el número '{currentNumero}' en el SectorId '{currentSectorId}'. La combinación de Sector y Número debe ser única.");
+                }
             }
 
             try

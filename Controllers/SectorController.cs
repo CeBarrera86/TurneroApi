@@ -9,7 +9,6 @@ namespace TurneroApi.Controllers
 {
   [Route("api/[controller]")]
   [ApiController]
-  // [Authorize]
   public class SectorController : ControllerBase
   {
     private readonly ISectorService _sectorService;
@@ -94,10 +93,17 @@ namespace TurneroApi.Controllers
     }
 
     [HttpGet("activos")]
-    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivos()
     {
       var sectores = await _sectorService.GetSectoresActivosAsync();
+      var sectoresDto = _mapper.Map<IEnumerable<SectorDto>>(sectores);
+      return Ok(sectoresDto);
+    }
+
+    [HttpGet("activos-padres")]
+    public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivosPadres()
+    {
+      var sectores = await _sectorService.GetSectoresActivosPadresAsync();
       var sectoresDto = _mapper.Map<IEnumerable<SectorDto>>(sectores);
       return Ok(sectoresDto);
     }

@@ -136,10 +136,12 @@ public class SectorService : ISectorService
 
   public async Task<IEnumerable<Sector>> GetSectoresActivosAsync()
   {
-    return await _context.Sectores
-        .Include(s => s.Padre)
-        .Where(s => s.Activo)
-        .ToListAsync();
+    return await _context.Sectores.Include(s => s.Padre).Where(s => s.Activo).ToListAsync();
+  }
+
+  public async Task<IEnumerable<Sector>> GetSectoresActivosPadresAsync()
+  {
+    return await _context.Sectores.Where(s => s.Activo && s.PadreId == null).ToListAsync();
   }
 
   public async Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(uint id)

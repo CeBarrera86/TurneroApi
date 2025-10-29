@@ -8,7 +8,6 @@ namespace TurneroApi.Controllers
 {
   [Route("api/[controller]")]
   [ApiController]
-  [Authorize]
   public class EstadoController : ControllerBase
   {
     private readonly IEstadoService _estadoService;

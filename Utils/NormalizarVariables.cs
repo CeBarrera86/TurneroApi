@@ -23,7 +23,7 @@ public static class NormalizarVariables
   // --- NOMBRE (usuarios, sectores, etc.) ---
   public static string? NormalizeNombre(string? input) => string.IsNullOrWhiteSpace(input) ? null : Regex.Replace(input.Trim(), @"\s+", " ").ToUpperInvariant();
 
-  // --- TIPO 
+  // --- TIPO (Rol y Mostrador)
   public static string? NormalizeTipoRol(string? input)
   {
     if (string.IsNullOrWhiteSpace(input)) return null;
@@ -34,6 +34,13 @@ public static class NormalizarVariables
   public static string? NormalizeTipoMostrador(string? input)
   {
     return string.IsNullOrWhiteSpace(input) ? null : Regex.Replace(input.Trim(), @"\s+", " ").ToUpperInvariant();
+  }
+
+  // --- IP (mostradores) ---
+  public static string? NormalizeIp(string? input)
+  {
+    if (string.IsNullOrWhiteSpace(input)) return null;
+    return Regex.Replace(input.Trim(), @"\s+", "");
   }
 
   // --- TITULAR (clientes) ---

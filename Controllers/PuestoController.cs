@@ -9,7 +9,6 @@ namespace TurneroApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class PuestoController : ControllerBase
     {
         private readonly IPuestoService _puestoService;

@@ -24,7 +24,7 @@ namespace TurneroApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetUsuarios(int page = 1, int pageSize = 10)
         {
-            var usuarios = await _usuarioService.GetUsuariosAsync(page, pageSize);
+            var usuarios = await _usuarioService.GetUsuariosAsync();
             var usuariosDto = _mapper.Map<IEnumerable<UsuarioDto>>(usuarios);
             return Ok(usuariosDto);
         }

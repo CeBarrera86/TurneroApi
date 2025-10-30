@@ -110,6 +110,15 @@ CREATE TABLE historiales (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE contenidos (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    ruta VARCHAR(255) NOT NULL,
+    tipo ENUM('imagen', 'video') NOT NULL,
+    activa TINYINT(1) NOT NULL DEFAULT 1,
+    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Índices recomendados para rendimiento
 CREATE INDEX idx_puestos_usuario ON puestos(usuario_id);
 CREATE INDEX idx_tickets_cliente ON tickets(cliente_id);

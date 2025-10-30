@@ -95,6 +95,7 @@ else
 
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IClienteRemotoService, ClienteRemotoService>();
+builder.Services.AddScoped<IContenidoService, ContenidoService>();
 builder.Services.AddScoped<IEstadoService, EstadoService>();
 builder.Services.AddScoped<IHistorialService, HistorialService>();
 builder.Services.AddScoped<IMostradorService, MostradorService>();

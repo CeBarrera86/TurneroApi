@@ -23,6 +23,17 @@ public static class NormalizarVariables
   // --- NOMBRE (usuarios, sectores, etc.) ---
   public static string? NormalizeNombre(string? input) => string.IsNullOrWhiteSpace(input) ? null : Regex.Replace(input.Trim(), @"\s+", " ").ToUpperInvariant();
 
+  public static string NormalizarNombreArchivo(string nombre)
+    {
+        var sinEspacios = nombre.Replace(" ", "_");
+        var sinCaracteres = Path.GetFileNameWithoutExtension(sinEspacios)
+            .ToLowerInvariant()
+            .Replace("-", "_")
+            .Replace(".", "_");
+        var extension = Path.GetExtension(nombre).ToLowerInvariant();
+        return $"{sinCaracteres}{extension}";
+    }
+
   // --- TIPO (Rol y Mostrador)
   public static string? NormalizeTipoRol(string? input)
   {

@@ -145,7 +145,7 @@ namespace TurneroApi.Mappings
         .ForMember(dest => dest.RolNavigation, opt => opt.Ignore());
 
       // Contenido
-      CreateMap<Contenido, ContenidoDto>().ReverseMap();
+      CreateMap<Contenido, ContenidoDto>() .AfterMap<ContenidoMappingAction>();
     }
   }
 }

@@ -13,6 +13,7 @@ using TurneroApi.Mappings;
 using TurneroApi.Services;
 using TurneroApi.Services.GeaPico;
 using TurneroApi.Services.Mocks;
+using TurneroApi.Config;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -93,6 +94,8 @@ else
   builder.Services.AddScoped<IGeaSeguridadService, GeaSeguridadService>();
 }
 
+builder.Services.AddScoped<ContenidoMappingAction>();
+builder.Services.AddScoped<IArchivoService, ArchivoService>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IClienteRemotoService, ClienteRemotoService>();
 builder.Services.AddScoped<IContenidoService, ContenidoService>();
@@ -104,11 +107,11 @@ builder.Services.AddScoped<IRolService, RolService>();
 builder.Services.AddScoped<ISectorService, SectorService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITurnoService, TurnoService>();
+builder.Services.AddScoped<IUrlBuilderService, UrlBuilderService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 // --- Conexiones a bases de datos ---
 var turneroConnectionString = builder.Configuration.GetConnectionString("TurneroDb");
-Console.WriteLine($"🔍 Cadena de conexión TurneroDb: {turneroConnectionString}");
 Console.WriteLine($"🌍 Entorno activo: {builder.Environment.EnvironmentName}");
 
 builder.Services.AddDbContext<TurneroDbContext>(options =>
@@ -150,6 +153,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// --- Rutas NAS ---
+builder.Services.Configure<RutasConfig>(builder.Configuration.GetSection("Rutas"));
+
+// --- Build ---
 var app = builder.Build();
 
 // --- Diagnóstico de conexión ---
@@ -180,8 +187,9 @@ else
 // ⚠️ HTTPS redirection solo si lo necesitás
 // app.UseHttpsRedirection();
 
-app.UseCors();
+
 app.UseRouting();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

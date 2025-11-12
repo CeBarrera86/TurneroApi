@@ -5,16 +5,18 @@ namespace TurneroApi.Validation;
 
 public static class UsuarioValidator
 {
-  public static async Task<string?> ValidateUsernameAsync(TurneroDbContext context, string? username, uint? excludeId = null)
+  public static async Task<string?> ValidateUsernameAsync(TurneroDbContext context, string? username, int? excludeId = null)
   {
-    if (string.IsNullOrWhiteSpace(username)) return null;
+    if (string.IsNullOrWhiteSpace(username))
+      return "El nombre de usuario no puede estar vacío.";
 
-    var exists = await context.Usuarios.AnyAsync(u => u.Username == username && (!excludeId.HasValue || u.Id != excludeId.Value));
+    var exists = await context.Usuarios
+        .AnyAsync(u => u.Username == username && (!excludeId.HasValue || u.Id != excludeId.Value));
 
     return exists ? $"El nombre de usuario '{username}' ya está en uso." : null;
   }
 
-  public static async Task<string?> ValidateRolIdAsync(TurneroDbContext context, uint rolId)
+  public static async Task<string?> ValidateRolIdAsync(TurneroDbContext context, int rolId)
   {
     if (rolId == 0) return "El RolId proporcionado no es válido (no puede ser 0).";
 

@@ -1,4 +1,4 @@
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Contenido;
 using TurneroApi.Models;
 
 namespace TurneroApi.Interfaces;

@@ -7,6 +7,7 @@ using System.Text;
 using TurneroApi.Data;
 using TurneroApi.Models.Session;
 using TurneroApi.Interfaces.GeaPico;
+using TurneroApi.Models;
 
 namespace TurneroApi.Controllers
 {
@@ -46,17 +47,59 @@ namespace TurneroApi.Controllers
       if (mostrador == null)
         return Unauthorized("IP del mostrador no registrada o inválida.");
 
-      var turneroUser = await _turneroContext.Usuarios.Include(u => u.RolNavigation).FirstOrDefaultAsync(u => u.Username == request.Username);
+      var turneroUser = await _turneroContext.Usuarios
+          .Include(u => u.RolNavigation)
+          .FirstOrDefaultAsync(u => u.Username == request.Username);
+
       if (turneroUser == null)
         return Unauthorized("Usuario no configurado en el sistema de turnos.");
 
-      var claims = new List<Claim>
-      {
-          new Claim(ClaimTypes.NameIdentifier, turneroUser.Id.ToString()),
-          new Claim(ClaimTypes.Name, turneroUser.Username),
-          new Claim(ClaimTypes.Role, turneroUser.RolNavigation.Tipo)
-      };
+      // Obtener permisos del rol
+      var permisos = await _turneroContext.RolPermisos
+          .Where(rp => rp.RolId == turneroUser.RolId)
+          .Include(rp => rp.Permiso)
+          .Select(rp => rp.Permiso.Nombre)
+          .ToListAsync();
 
+      // Claims base
+      var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, turneroUser.Id.ToString()),
+                new Claim(ClaimTypes.Name, turneroUser.Username),
+                new Claim(ClaimTypes.Role, turneroUser.RolNavigation.Nombre)
+            };
+
+      // Claims de permisos
+      foreach (var permiso in permisos)
+      {
+        claims.Add(new Claim("permiso", permiso));
+      }
+
+      // Registrar o actualizar puesto
+      var puestoExistente = await _turneroContext.Puestos
+          .FirstOrDefaultAsync(p => p.UsuarioId == turneroUser.Id && p.MostradorId == mostrador.Id);
+
+      if (puestoExistente != null)
+      {
+        puestoExistente.Login = DateTime.UtcNow;
+        puestoExistente.Logout = null;
+        puestoExistente.Activo = true;
+      }
+      else
+      {
+        puestoExistente = new Puesto
+        {
+          UsuarioId = turneroUser.Id,
+          MostradorId = mostrador.Id,
+          Login = DateTime.UtcNow,
+          Activo = true
+        };
+        await _turneroContext.Puestos.AddAsync(puestoExistente);
+      }
+
+      await _turneroContext.SaveChangesAsync();
+
+      // Configuración JWT
       var jwtKey = _config["Jwt:Key"];
       var jwtIssuer = _config["Jwt:Issuer"];
       var jwtAudience = _config["Jwt:Audience"];
@@ -87,9 +130,10 @@ namespace TurneroApi.Controllers
           token = tokenString,
           username = turneroUser.Username,
           name = turneroUser.Nombre,
-          rol = turneroUser.RolNavigation.Tipo,
+          rol = turneroUser.RolNavigation.Nombre,
+          permisos = permisos,
           mostradorTipo = mostrador.Tipo,
-          mostradorSector = mostrador.SectorId
+          mostradorSector = mostrador.MostradorSectores
         };
 
         _logger.LogInformation("Login exitoso. Respuesta generada: {@Response}", responsePayload);

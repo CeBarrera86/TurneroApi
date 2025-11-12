@@ -1,7 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Estado;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 namespace TurneroApi.Controllers
@@ -30,7 +30,7 @@ namespace TurneroApi.Controllers
 
     // GET: api/Estado/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<EstadoDto>> GetEstado(uint id)
+    public async Task<ActionResult<EstadoDto>> GetEstado(int id)
     {
       var estado = await _estadoService.GetEstadoAsync(id);
       if (estado == null)
@@ -45,7 +45,7 @@ namespace TurneroApi.Controllers
     // PUT: api/Estado/5
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> PutEstado(uint id, [FromBody] EstadoActualizarDto estadoActualizarDto)
+    public async Task<IActionResult> PutEstado(int id, [FromBody] EstadoActualizarDto estadoActualizarDto)
     {
       if (!ModelState.IsValid)
       {
@@ -94,7 +94,7 @@ namespace TurneroApi.Controllers
     // DELETE: api/Estado/5
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> DeleteEstado(uint id)
+    public async Task<IActionResult> DeleteEstado(int id)
     {
       var (deleted, errorMessage) = await _estadoService.DeleteEstadoAsync(id);
       if (!deleted)

@@ -4,13 +4,13 @@ using TurneroApi.Models;
 
 namespace TurneroApi.Validation
 {
-    public static class EstadoValidator
+  public static class EstadoValidator
+  {
+    public static async Task<string?> ValidarLetraUnicaAsync(TurneroDbContext context, string letra, int? id = null) // ← int
     {
-        public static async Task<string?> ValidarLetraUnicaAsync(TurneroDbContext context, string letra, uint? id = null)
-        {
-            var existe = await context.Estados.AnyAsync(e => e.Letra == letra && (!id.HasValue || e.Id != id.Value));
+      var existe = await context.Estados.AnyAsync(e => e.Letra == letra && (!id.HasValue || e.Id != id.Value));
 
-            return existe ? $"Ya existe un estado con la letra '{letra}'. La letra debe ser única." : null;
-        }
+      return existe ? $"Ya existe un estado con la letra '{letra}'. La letra debe ser única." : null;
     }
+  }
 }

@@ -1,7 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Contenido;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Utils;

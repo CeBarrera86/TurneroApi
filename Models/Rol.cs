@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace TurneroApi.Models;
+﻿namespace TurneroApi.Models;
 
 public partial class Rol
 {
-    public uint Id { get; set; }
-    public string Tipo { get; set; } = null!;
-    public virtual ICollection<Usuario> Usuario { get; set; } = new List<Usuario>();
+    public int Id { get; set; }
+    public string Nombre { get; set; } = null!;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+
+    public virtual ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+    public virtual ICollection<RolPermiso> RolPermisos { get; set; } = new List<RolPermiso>();
 }

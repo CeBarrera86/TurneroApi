@@ -1,5 +1,5 @@
 using AutoMapper;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Contenido;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 

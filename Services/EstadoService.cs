@@ -1,7 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Estado;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Utils;
@@ -25,7 +25,7 @@ namespace TurneroApi.Services
       return await _context.Estados.ToListAsync();
     }
 
-    public async Task<Estado?> GetEstadoAsync(uint id)
+    public async Task<Estado?> GetEstadoAsync(int id) // ← int en lugar de uint
     {
       return await _context.Estados.FindAsync(id);
     }
@@ -53,7 +53,7 @@ namespace TurneroApi.Services
       }
     }
 
-    public async Task<(Estado? estado, string? errorMessage)> UpdateEstadoAsync(uint id, EstadoActualizarDto dto)
+    public async Task<(Estado? estado, string? errorMessage)> UpdateEstadoAsync(int id, EstadoActualizarDto dto) // ← int
     {
       var estado = await _context.Estados.FindAsync(id);
       if (estado == null)
@@ -103,7 +103,7 @@ namespace TurneroApi.Services
       }
     }
 
-    public async Task<(bool deleted, string? errorMessage)> DeleteEstadoAsync(uint id)
+    public async Task<(bool deleted, string? errorMessage)> DeleteEstadoAsync(int id) // ← int
     {
       var estado = await _context.Estados.FindAsync(id);
       if (estado == null)

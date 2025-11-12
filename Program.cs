@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,9 +23,7 @@ builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // --- Controllers ---
-builder.Services.AddControllers(options =>
-{
-}).ConfigureApiBehaviorOptions(options =>
+builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {
   options.InvalidModelStateResponseFactory = context =>
   {
@@ -34,7 +33,6 @@ builder.Services.AddControllers(options =>
       Title = "Uno o más errores de validación ocurrieron.",
       Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
     };
-
     return new BadRequestObjectResult(problemDetails);
   };
 });
@@ -50,7 +48,7 @@ builder.Services.AddSwaggerGen(c =>
     Scheme = "Bearer",
     BearerFormat = "JWT",
     In = ParameterLocation.Header,
-    Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token.\n\nExample: \"Bearer 12345abcdef\"",
+    Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Bearer 12345abcdef\""
   });
   c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -76,7 +74,7 @@ builder.Services.AddCors(options =>
 {
   options.AddDefaultPolicy(policy =>
   {
-    policy.WithOrigins("http://localhost:5173", "http://172.16.14.87:5173")
+    policy.WithOrigins("http://localhost:5173", "http://172.16.14.87:5173", "http://localhost:5174", "http://172.16.14.87:5174")
             .AllowAnyHeader()
             .AllowAnyMethod();
   });
@@ -101,9 +99,13 @@ builder.Services.AddScoped<IClienteRemotoService, ClienteRemotoService>();
 builder.Services.AddScoped<IContenidoService, ContenidoService>();
 builder.Services.AddScoped<IEstadoService, EstadoService>();
 builder.Services.AddScoped<IHistorialService, HistorialService>();
+builder.Services.AddScoped<IMiniaturaService, MiniaturaService>();
+builder.Services.AddScoped<IMostradorSectorService, MostradorSectorService>();
 builder.Services.AddScoped<IMostradorService, MostradorService>();
 builder.Services.AddScoped<IPuestoService, PuestoService>();
 builder.Services.AddScoped<IRolService, RolService>();
+builder.Services.AddScoped<IRolPermisoService, RolPermisoService>();
+builder.Services.AddScoped<IPermisoService, PermisoService>();
 builder.Services.AddScoped<ISectorService, SectorService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITurnoService, TurnoService>();
@@ -151,7 +153,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
       };
     });
 
-builder.Services.AddAuthorization();
+// --- Autorización dinámica basada en permisos ---
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicAuthorizationPolicyProvider>();
 
 // --- Rutas NAS ---
 builder.Services.Configure<RutasConfig>(builder.Configuration.GetSection("Rutas"));
@@ -186,7 +189,6 @@ else
 
 // ⚠️ HTTPS redirection solo si lo necesitás
 // app.UseHttpsRedirection();
-
 
 app.UseRouting();
 app.UseCors();

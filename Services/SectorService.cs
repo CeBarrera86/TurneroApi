@@ -1,7 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Sector;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Utils;
@@ -22,12 +22,19 @@ public class SectorService : ISectorService
 
   public async Task<IEnumerable<Sector>> GetSectoresAsync()
   {
-    return await _context.Sectores.Include(s => s.Padre).ToListAsync();
+    return await _context.Sectores
+        .Include(s => s.Padre)
+        .AsNoTracking()
+        .OrderBy(s => s.Nombre ?? s.Letra)
+        .ToListAsync();
   }
 
-  public async Task<Sector?> GetSectorAsync(uint id)
+  public async Task<Sector?> GetSectorAsync(int id)
   {
-    return await _context.Sectores.Include(s => s.Padre).FirstOrDefaultAsync(s => s.Id == id);
+    return await _context.Sectores
+        .Include(s => s.Padre)
+        .AsNoTracking()
+        .FirstOrDefaultAsync(s => s.Id == id);
   }
 
   public async Task<(Sector? sector, string? errorMessage)> CreateSectorAsync(Sector sector)
@@ -61,49 +68,47 @@ public class SectorService : ISectorService
     }
   }
 
-  public async Task<(Sector? sector, string? errorMessage)> UpdateSectorAsync(uint id, SectorActualizarDto dto)
+  public async Task<(Sector? sector, string? errorMessage)> UpdateSectorAsync(int id, SectorActualizarDto dto)
   {
     var sector = await _context.Sectores.FindAsync(id);
     if (sector == null) return (null, "Sector no encontrado.");
 
     var letra = NormalizarVariables.NormalizeLetraSector(dto.Letra);
-    if (letra != sector.Letra)
+    if (dto.Letra == null)
+    {
+      sector.Letra = null;
+    }
+    else if (letra != sector.Letra)
     {
       var letraError = await SectorValidator.ValidateLetraAsync(_context, letra, id);
       if (letraError != null) return (null, letraError);
       sector.Letra = letra;
     }
-    else if (dto.Letra == null)
-    {
-      sector.Letra = null;
-    }
 
     var nombre = NormalizarVariables.NormalizeNombre(dto.Nombre);
-    if (nombre != sector.Nombre)
+    if (dto.Nombre == null)
+    {
+      sector.Nombre = null;
+    }
+    else if (nombre != sector.Nombre)
     {
       var nombreError = await SectorValidator.ValidateNombreAsync(_context, nombre, id);
       if (nombreError != null) return (null, nombreError);
       sector.Nombre = nombre;
     }
-    else if (dto.Nombre == null)
-    {
-      sector.Nombre = null;
-    }
 
     var descripcion = NormalizarVariables.NormalizeDescripcionSector(dto.Descripcion);
-    if (descripcion != sector.Descripcion)
-    {
-      sector.Descripcion = descripcion;
-    }
-    else if (dto.Descripcion == null)
+    if (dto.Descripcion == null)
     {
       sector.Descripcion = null;
     }
+    else if (descripcion != sector.Descripcion)
+    {
+      sector.Descripcion = descripcion;
+    }
 
     if (dto.Activo.HasValue)
-    {
       sector.Activo = dto.Activo.Value;
-    }
 
     if (dto.PadreId.HasValue)
     {
@@ -115,6 +120,8 @@ public class SectorService : ISectorService
     {
       sector.PadreId = null;
     }
+
+    sector.UpdatedAt = DateTime.Now;
 
     try
     {
@@ -136,23 +143,35 @@ public class SectorService : ISectorService
 
   public async Task<IEnumerable<Sector>> GetSectoresActivosAsync()
   {
-    return await _context.Sectores.Include(s => s.Padre).Where(s => s.Activo).ToListAsync();
+    return await _context.Sectores
+        .Include(s => s.Padre)
+        .AsNoTracking()
+        .Where(s => s.Activo)
+        .OrderBy(s => s.Nombre ?? s.Letra)
+        .ToListAsync();
   }
 
   public async Task<IEnumerable<Sector>> GetSectoresActivosPadresAsync()
   {
-    return await _context.Sectores.Where(s => s.Activo && s.PadreId == null).ToListAsync();
+    return await _context.Sectores
+        .AsNoTracking()
+        .Where(s => s.Activo && s.PadreId == null)
+        .OrderBy(s => s.Nombre ?? s.Letra)
+        .ToListAsync();
   }
 
-  public async Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(uint id)
+  public async Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(int id)
   {
     var sector = await _context.Sectores.FindAsync(id);
     if (sector == null) return (false, "El sector no existe.");
 
-    if (await _context.Mostradores.AnyAsync(m => m.SectorId == id))
+    // Antes: _context.Mostradores.AnyAsync(m => m.SectorId == id)
+    var tieneMostradoresAsociados = await _context.MostradorSectores.AnyAsync(ms => ms.SectorId == id);
+    if (tieneMostradoresAsociados)
       return (false, "El sector tiene mostradores asociados y no puede eliminarse.");
 
-    if (await _context.Sectores.AnyAsync(s => s.PadreId == id))
+    var tieneHijos = await _context.Sectores.AnyAsync(s => s.PadreId == id);
+    if (tieneHijos)
       return (false, "El sector tiene sectores hijos y no puede eliminarse.");
 
     _context.Sectores.Remove(sector);
@@ -173,9 +192,11 @@ public class SectorService : ISectorService
   {
     if (ex.InnerException?.Message?.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase) == true)
     {
-      if (ex.InnerException.Message.Contains("'letra'", StringComparison.OrdinalIgnoreCase))
+      if (!string.IsNullOrEmpty(sector.Letra) &&
+          ex.InnerException.Message.Contains("'letra'", StringComparison.OrdinalIgnoreCase))
         return $"La letra '{sector.Letra}' ya está en uso. (DB Error)";
-      if (ex.InnerException.Message.Contains("'nombre'", StringComparison.OrdinalIgnoreCase))
+      if (!string.IsNullOrEmpty(sector.Nombre) &&
+          ex.InnerException.Message.Contains("'nombre'", StringComparison.OrdinalIgnoreCase))
         return $"El nombre '{sector.Nombre}' ya está en uso. (DB Error)";
     }
     return "Error al guardar el sector. Asegúrate de que los datos sean únicos y válidos.";

@@ -1,10 +1,9 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Rol;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 using TurneroApi.Validation;
 
 namespace TurneroApi.Services;
@@ -22,22 +21,18 @@ public class RolService : IRolService
 
   public async Task<IEnumerable<Rol>> GetRolesAsync()
   {
-    return await _context.Roles.ToListAsync();
+    return await _context.Roles.AsNoTracking().ToListAsync();
   }
 
-  public async Task<Rol?> GetRolAsync(uint id)
+  public async Task<Rol?> GetRolAsync(int id)
   {
-    return await _context.Roles.FindAsync(id);
+    return await _context.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
   }
 
   public async Task<(Rol? rol, string? errorMessage)> CreateRolAsync(Rol rol)
   {
-    // --- Normalización ---
-    rol.Tipo = NormalizarVariables.NormalizeTipoRol(rol.Tipo) ?? string.Empty;
-
-    // --- Validación ---
-    var tipoError = await RolValidator.ValidateTipoAsync(_context, rol.Tipo);
-    if (tipoError != null) return (null, tipoError);
+    var nombreError = await RolValidator.ValidateNombreAsync(_context, rol.Nombre);
+    if (nombreError != null) return (null, nombreError);
 
     _context.Roles.Add(rol);
     try
@@ -51,18 +46,19 @@ public class RolService : IRolService
     }
   }
 
-  public async Task<(Rol? rol, string? errorMessage)> UpdateRolAsync(uint id, RolActualizarDto dto)
+  public async Task<(Rol? rol, string? errorMessage)> UpdateRolAsync(int id, RolActualizarDto dto)
   {
     var rol = await _context.Roles.FindAsync(id);
     if (rol == null) return (null, "Rol no encontrado.");
 
-    var tipo = NormalizarVariables.NormalizeTipoRol(dto.Tipo) ?? string.Empty;
-    if (tipo != rol.Tipo)
+    if (!string.IsNullOrWhiteSpace(dto.Nombre) && dto.Nombre != rol.Nombre)
     {
-      var tipoError = await RolValidator.ValidateTipoAsync(_context, tipo, id);
-      if (tipoError != null) return (null, tipoError);
-      rol.Tipo = tipo;
+      var nombreError = await RolValidator.ValidateNombreAsync(_context, dto.Nombre, id);
+      if (nombreError != null) return (null, nombreError);
+      rol.Nombre = dto.Nombre;
     }
+
+    rol.UpdatedAt = DateTime.Now;
 
     try
     {
@@ -81,11 +77,10 @@ public class RolService : IRolService
     }
   }
 
-  public async Task<(bool deleted, string? errorMessage)> DeleteRolAsync(uint id)
+  public async Task<(bool deleted, string? errorMessage)> DeleteRolAsync(int id)
   {
     var rol = await _context.Roles.FindAsync(id);
-    if (rol == null)
-      return (false, "El rol no existe.");
+    if (rol == null) return (false, "El rol no existe.");
 
     try
     {
@@ -103,13 +98,12 @@ public class RolService : IRolService
     }
   }
 
-  // --- Manejo de errores centralizado ---
   private string InterpretarDbError(DbUpdateException ex, Rol rol)
   {
     if (ex.InnerException?.Message?.Contains("Duplicate entry", StringComparison.OrdinalIgnoreCase) == true &&
-        ex.InnerException.Message.Contains("'tipo'", StringComparison.OrdinalIgnoreCase))
+        ex.InnerException.Message.Contains("'nombre'", StringComparison.OrdinalIgnoreCase))
     {
-      return $"El tipo de rol '{rol.Tipo}' ya está en uso. (DB Error)";
+      return $"El nombre de rol '{rol.Nombre}' ya está en uso.";
     }
     return "Error al guardar el rol. Asegúrate de que los datos sean únicos y válidos.";
   }

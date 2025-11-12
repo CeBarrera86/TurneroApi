@@ -13,9 +13,12 @@ public partial class TurneroDbContext : DbContext
   public virtual DbSet<Estado> Estados { get; set; }
   public virtual DbSet<Historial> Historiales { get; set; }
   public virtual DbSet<Mostrador> Mostradores { get; set; }
+  public virtual DbSet<MostradorSector> MostradorSectores { get; set; }
   public virtual DbSet<Contenido> Contenidos { get; set; }
+  public virtual DbSet<Permiso> Permisos { get; set; }
   public virtual DbSet<Puesto> Puestos { get; set; }
   public virtual DbSet<Rol> Roles { get; set; }
+  public virtual DbSet<RolPermiso> RolPermisos { get; set; }
   public virtual DbSet<Sector> Sectores { get; set; }
   public virtual DbSet<Ticket> Tickets { get; set; }
   public virtual DbSet<Turno> Turnos { get; set; }
@@ -28,9 +31,12 @@ public partial class TurneroDbContext : DbContext
     modelBuilder.ApplyConfiguration(new EstadoConfig());
     modelBuilder.ApplyConfiguration(new HistorialConfig());
     modelBuilder.ApplyConfiguration(new MostradorConfig());
+    modelBuilder.ApplyConfiguration(new MostradorSectorConfig());
     modelBuilder.ApplyConfiguration(new ContenidoConfig());
+    modelBuilder.ApplyConfiguration(new PermisoConfig());
     modelBuilder.ApplyConfiguration(new PuestoConfig());
     modelBuilder.ApplyConfiguration(new RolConfig());
+    modelBuilder.ApplyConfiguration(new RolPermisoConfig());
     modelBuilder.ApplyConfiguration(new SectorConfig());
     modelBuilder.ApplyConfiguration(new TicketConfig());
     modelBuilder.ApplyConfiguration(new TurnoConfig());

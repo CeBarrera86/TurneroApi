@@ -1,24 +1,45 @@
 -- Tabla: roles
 CREATE TABLE roles (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    tipo VARCHAR(20) NOT NULL UNIQUE
+    nombre VARCHAR(20) NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Tabla: usuarios
-CREATE TABLE usuarios (
+-- Tabla: permisos
+CREATE TABLE permisos (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL,
-    apellido VARCHAR(50) NOT NULL,
-    username VARCHAR(30) NOT NULL UNIQUE,
-    rol_id INT UNSIGNED NOT NULL,
-    FOREIGN KEY (rol_id) REFERENCES roles(id)
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: clientes
 CREATE TABLE clientes (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    dni VARCHAR(10) NOT NULL UNIQUE CHECK (dni REGEXP '^[0-9]+$'),
+    dni CHAR(10) NOT NULL UNIQUE CHECK (dni REGEXP '^[0-9]+$'),
     titular VARCHAR(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: contenidos
+CREATE TABLE contenidos (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL UNIQUE,
+    ruta VARCHAR(255) NOT NULL,
+    tipo ENUM('imagen', 'video') NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: estados
+CREATE TABLE estados (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    letra VARCHAR(2) NOT NULL UNIQUE CHECK (letra REGEXP '^[A-Z]{1,2}$'),
+    descripcion VARCHAR(20) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: sectores
@@ -28,7 +49,9 @@ CREATE TABLE sectores (
     letra VARCHAR(3) NULL UNIQUE CHECK (letra REGEXP '^[A-Z]{1,3}$'),
     nombre VARCHAR(50) NULL UNIQUE,
     descripcion VARCHAR(120) NULL,
-    activo TINYINT(1) NOT NULL DEFAULT 1,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (padre_id) REFERENCES sectores(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -38,9 +61,22 @@ CREATE TABLE mostradores (
     numero INT UNSIGNED NOT NULL,
     ip VARCHAR(15) NOT NULL UNIQUE,
     tipo VARCHAR(10) NULL,
-    sector_id INT UNSIGNED NOT NULL,
-    FOREIGN KEY (sector_id) REFERENCES sectores(id),
-    UNIQUE (sector_id, numero)
+    UNIQUE (numero, ip),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tabla: usuarios
+CREATE TABLE usuarios (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL,
+    apellido VARCHAR(50) NOT NULL,
+    username VARCHAR(30) NOT NULL UNIQUE,
+    rol_id INT UNSIGNED NOT NULL,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (rol_id) REFERENCES roles(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: puestos
@@ -53,13 +89,6 @@ CREATE TABLE puestos (
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
     FOREIGN KEY (mostrador_id) REFERENCES mostradores(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Tabla: estados
-CREATE TABLE estados (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    letra VARCHAR(2) NOT NULL UNIQUE CHECK (letra REGEXP '^[A-Z]{1,2}$'),
-    descripcion VARCHAR(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: tickets
@@ -110,16 +139,25 @@ CREATE TABLE historiales (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE contenidos (
-    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL UNIQUE,
-    ruta VARCHAR(255) NOT NULL,
-    tipo ENUM('imagen', 'video') NOT NULL,
-    activa TINYINT(1) NOT NULL DEFAULT 1,
-    fecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- Tabla intermedia: rol_permiso
+CREATE TABLE rol_permiso (
+    rol_id INT UNSIGNED NOT NULL,
+    permiso_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (rol_id, permiso_id),
+    FOREIGN KEY (rol_id) REFERENCES roles(id),
+    FOREIGN KEY (permiso_id) REFERENCES permisos(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Índices recomendados para rendimiento
+-- Tabla intermedia: mostrador_sector
+CREATE TABLE mostrador_sector (
+    mostrador_id INT UNSIGNED NOT NULL,
+    sector_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (mostrador_id, sector_id),
+    FOREIGN KEY (mostrador_id) REFERENCES mostradores(id),
+    FOREIGN KEY (sector_id) REFERENCES sectores(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Índices recomendados
 CREATE INDEX idx_puestos_usuario ON puestos(usuario_id);
 CREATE INDEX idx_tickets_cliente ON tickets(cliente_id);
 CREATE INDEX idx_turnos_ticket ON turnos(ticket_id);
@@ -127,3 +165,5 @@ CREATE INDEX idx_historial_ticket ON historiales(ticket_id);
 CREATE INDEX idx_ticket_sector_estado ON tickets(sector_id_actual, estado_id);
 CREATE INDEX idx_turno_puesto ON turnos(puesto_id);
 CREATE INDEX idx_historial_fecha ON historiales(fecha);
+CREATE INDEX idx_usuarios_nombre_apellido ON usuarios(nombre, apellido);
+CREATE INDEX idx_tickets_fecha ON tickets(fecha);

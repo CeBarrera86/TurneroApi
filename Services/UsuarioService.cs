@@ -1,7 +1,7 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
-using TurneroApi.DTOs;
+using TurneroApi.DTOs.Usuario;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Utils;
@@ -25,7 +25,7 @@ public class UsuarioService : IUsuarioService
     return await _context.Usuarios.Include(u => u.RolNavigation).ToListAsync();
   }
 
-  public async Task<Usuario?> GetUsuarioAsync(uint id)
+  public async Task<Usuario?> GetUsuarioAsync(int id)
   {
     return await _context.Usuarios.Include(u => u.RolNavigation).FirstOrDefaultAsync(u => u.Id == id);
   }
@@ -55,7 +55,7 @@ public class UsuarioService : IUsuarioService
     }
   }
 
-  public async Task<(Usuario? usuario, string? errorMessage)> UpdateUsuarioAsync(uint id, UsuarioActualizarDto dto)
+  public async Task<(Usuario? usuario, string? errorMessage)> UpdateUsuarioAsync(int id, UsuarioActualizarDto dto)
   {
     var usuario = await _context.Usuarios.FindAsync(id);
     if (usuario == null) return (null, "Usuario no encontrado.");
@@ -74,8 +74,17 @@ public class UsuarioService : IUsuarioService
     var usernameError = await UsuarioValidator.ValidateUsernameAsync(_context, usuario.Username, id);
     if (usernameError != null) return (null, usernameError);
 
-    var rolError = await UsuarioValidator.ValidateRolIdAsync(_context, usuario.RolId);
-    if (rolError != null) return (null, rolError);
+    if (dto.RolId.HasValue)
+    {
+      var rolError = await UsuarioValidator.ValidateRolIdAsync(_context, dto.RolId.Value);
+      if (rolError != null) return (null, rolError);
+      usuario.RolId = dto.RolId.Value;
+    }
+
+    if (dto.Activo.HasValue)
+      usuario.Activo = dto.Activo.Value;
+
+    usuario.UpdatedAt = DateTime.Now;
 
     try
     {
@@ -95,7 +104,7 @@ public class UsuarioService : IUsuarioService
     }
   }
 
-  public async Task<bool> DeleteUsuarioAsync(uint id)
+  public async Task<bool> DeleteUsuarioAsync(int id)
   {
     var usuario = await _context.Usuarios.FindAsync(id);
     if (usuario == null) return false;

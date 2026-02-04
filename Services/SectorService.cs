@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Sector;
@@ -20,21 +21,45 @@ public class SectorService : ISectorService
     _mapper = mapper;
   }
 
-  public async Task<IEnumerable<Sector>> GetSectoresAsync()
+  public async Task<PagedResult<SectorDto>> GetSectoresAsync(int page, int pageSize)
   {
-    return await _context.Sectores
-        .Include(s => s.Padre)
+    var query = _context.Sectores
         .AsNoTracking()
         .OrderBy(s => s.Nombre ?? s.Letra)
-        .ToListAsync();
+        .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
   }
 
-  public async Task<Sector?> GetSectorAsync(int id)
+  public async Task<PagedResult<SectorDto>> GetSectoresTotemAsync(int page, int pageSize)
+  {
+    var query = _context.Sectores
+    .AsNoTracking()
+    .Where(s => s.Activo && s.PadreId == null)
+    .OrderBy(s => s.Id)
+    .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
+  }
+
+  public async Task<PagedResult<SectorDto>> GetTramitesTotemAsync(int page, int pageSize)
+  {
+    var query = _context.Sectores
+    .AsNoTracking()
+    .Where(s => s.Activo && s.PadreId != null)
+    .OrderBy(s => s.Id)
+    .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
+  }
+
+  public async Task<SectorDto?> GetSectorAsync(int id)
   {
     return await _context.Sectores
-        .Include(s => s.Padre)
         .AsNoTracking()
-        .FirstOrDefaultAsync(s => s.Id == id);
+        .Where(s => s.Id == id)
+        .ProjectTo<SectorDto>(_mapper.ConfigurationProvider)
+        .FirstOrDefaultAsync();
   }
 
   public async Task<(Sector? sector, string? errorMessage)> CreateSectorAsync(Sector sector)
@@ -141,24 +166,27 @@ public class SectorService : ISectorService
     }
   }
 
-  public async Task<IEnumerable<Sector>> GetSectoresActivosAsync()
-  {
-    return await _context.Sectores
-        .Include(s => s.Padre)
-        .AsNoTracking()
-        .Where(s => s.Activo)
-        .OrderBy(s => s.Nombre ?? s.Letra)
-        .ToListAsync();
-  }
+    public async Task<PagedResult<SectorDto>> GetSectoresActivosAsync(int page, int pageSize)
+    {
+      var query = _context.Sectores
+          .AsNoTracking()
+          .Where(s => s.Activo)
+          .OrderBy(s => s.Nombre ?? s.Letra)
+          .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
 
-  public async Task<IEnumerable<Sector>> GetSectoresActivosPadresAsync()
-  {
-    return await _context.Sectores
-        .AsNoTracking()
-        .Where(s => s.Activo && s.PadreId == null)
-        .OrderBy(s => s.Nombre ?? s.Letra)
-        .ToListAsync();
-  }
+      return await query.ToPagedResultAsync(page, pageSize);
+    }
+
+    public async Task<PagedResult<SectorDto>> GetSectoresActivosPadresAsync(int page, int pageSize)
+    {
+      var query = _context.Sectores
+          .AsNoTracking()
+          .Where(s => s.Activo && s.PadreId == null)
+          .OrderBy(s => s.Nombre ?? s.Letra)
+          .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
+    }
 
   public async Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(int id)
   {

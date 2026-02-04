@@ -16,8 +16,10 @@ public class TurnoConfig : IEntityTypeConfiguration<Turno>
     builder.Property(e => e.FechaInicio).HasColumnType("datetime").HasColumnName("fecha_inicio");
     builder.Property(e => e.FechaFin).HasColumnType("datetime").HasColumnName("fecha_fin");
     builder.Property(e => e.EstadoId).HasColumnType("int unsigned").HasColumnName("estado_id");
-    builder.HasOne(t => t.PuestoNavigation).WithMany(p => p.Turnos).HasForeignKey(t => t.PuestoId).OnDelete(DeleteBehavior.Cascade);
-    builder.HasOne(t => t.TicketNavigation).WithMany(ti => ti.Turnos).HasForeignKey(t => t.TicketId).OnDelete(DeleteBehavior.Cascade);
+    builder.HasOne(t => t.PuestoNavigation).WithMany(p => p.Turnos).HasForeignKey(t => t.PuestoId).OnDelete(DeleteBehavior.Restrict);
+    builder.HasOne(t => t.TicketNavigation).WithMany(ti => ti.Turnos).HasForeignKey(t => t.TicketId).OnDelete(DeleteBehavior.Restrict);
     builder.HasOne(t => t.EstadoNavigation).WithMany(e => e.Turnos).HasForeignKey(t => t.EstadoId).OnDelete(DeleteBehavior.Restrict);
+    builder.HasIndex(e => e.TicketId).HasDatabaseName("idx_turnos_ticket");
+    builder.HasIndex(e => e.PuestoId).HasDatabaseName("idx_turno_puesto");
   }
 }

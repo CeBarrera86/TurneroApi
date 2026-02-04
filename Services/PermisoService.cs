@@ -1,10 +1,12 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Permiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -19,14 +21,23 @@ public class PermisoService : IPermisoService
     _mapper = mapper;
   }
 
-  public async Task<IEnumerable<Permiso>> GetPermisosAsync()
+  public async Task<PagedResult<PermisoDto>> GetPermisosAsync(int page, int pageSize)
   {
-    return await _context.Permisos.AsNoTracking().ToListAsync();
+    var query = _context.Permisos
+      .AsNoTracking()
+      .OrderBy(p => p.Id)
+      .ProjectTo<PermisoDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
   }
 
-  public async Task<Permiso?> GetPermisoAsync(int id)
+  public async Task<PermisoDto?> GetPermisoAsync(int id)
   {
-    return await _context.Permisos.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
+    return await _context.Permisos
+      .AsNoTracking()
+      .Where(p => p.Id == id)
+      .ProjectTo<PermisoDto>(_mapper.ConfigurationProvider)
+      .FirstOrDefaultAsync();
   }
 
   public async Task<(Permiso? permiso, string? errorMessage)> CreatePermisoAsync(Permiso permiso)

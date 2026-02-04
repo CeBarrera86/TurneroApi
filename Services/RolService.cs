@@ -1,10 +1,12 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Rol;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -19,14 +21,23 @@ public class RolService : IRolService
     _mapper = mapper;
   }
 
-  public async Task<IEnumerable<Rol>> GetRolesAsync()
+  public async Task<PagedResult<RolDto>> GetRolesAsync(int page, int pageSize)
   {
-    return await _context.Roles.AsNoTracking().ToListAsync();
+    var query = _context.Roles
+      .AsNoTracking()
+      .OrderBy(r => r.Id)
+      .ProjectTo<RolDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
   }
 
-  public async Task<Rol?> GetRolAsync(int id)
+  public async Task<RolDto?> GetRolAsync(int id)
   {
-    return await _context.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
+    return await _context.Roles
+      .AsNoTracking()
+      .Where(r => r.Id == id)
+      .ProjectTo<RolDto>(_mapper.ConfigurationProvider)
+      .FirstOrDefaultAsync();
   }
 
   public async Task<(Rol? rol, string? errorMessage)> CreateRolAsync(Rol rol)

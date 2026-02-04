@@ -47,6 +47,7 @@ public class MostradorSectorController : ControllerBase
 
   // GET: api/MostradorSector/por-mostrador/{mostradorId}
   [HttpGet("por-mostrador/{mostradorId}")]
+  [Authorize(Policy = "ver_mostrador_sector")]
   public async Task<IActionResult> GetSectoresPorMostrador(int mostradorId)
   {
     var sectores = await _service.GetSectoresPorMostradorAsync(mostradorId);
@@ -55,6 +56,7 @@ public class MostradorSectorController : ControllerBase
 
   // GET: api/MostradorSector/por-sector/{sectorId}
   [HttpGet("por-sector/{sectorId}")]
+  [Authorize(Policy = "ver_mostrador_sector")]
   public async Task<IActionResult> GetMostradoresPorSector(int sectorId)
   {
     var mostradores = await _service.GetMostradoresPorSectorAsync(sectorId);

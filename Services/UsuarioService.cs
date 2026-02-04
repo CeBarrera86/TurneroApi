@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Usuario;
@@ -20,14 +21,23 @@ public class UsuarioService : IUsuarioService
     _mapper = mapper;
   }
 
-  public async Task<IEnumerable<Usuario>> GetUsuariosAsync()
+  public async Task<PagedResult<UsuarioDto>> GetUsuariosAsync(int page, int pageSize)
   {
-    return await _context.Usuarios.Include(u => u.RolNavigation).ToListAsync();
+    var query = _context.Usuarios
+      .AsNoTracking()
+      .OrderBy(u => u.Id)
+      .ProjectTo<UsuarioDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
   }
 
-  public async Task<Usuario?> GetUsuarioAsync(int id)
+  public async Task<UsuarioDto?> GetUsuarioAsync(int id)
   {
-    return await _context.Usuarios.Include(u => u.RolNavigation).FirstOrDefaultAsync(u => u.Id == id);
+    return await _context.Usuarios
+      .AsNoTracking()
+      .Where(u => u.Id == id)
+      .ProjectTo<UsuarioDto>(_mapper.ConfigurationProvider)
+      .FirstOrDefaultAsync();
   }
 
   public async Task<(Usuario? usuario, string? errorMessage)> CreateUsuarioAsync(Usuario usuario)

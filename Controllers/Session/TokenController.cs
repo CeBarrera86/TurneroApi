@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
@@ -29,6 +31,8 @@ namespace TurneroApi.Controllers
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
+    [EnableRateLimiting("public")]
     public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
     {
       var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();

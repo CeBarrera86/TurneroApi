@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Mostrador;
@@ -20,23 +21,23 @@ public class MostradorService : IMostradorService
     _mapper = mapper;
   }
 
-  public async Task<IEnumerable<Mostrador>> GetMostradoresAsync()
-  {
-    return await _context.Mostradores
-        .Include(m => m.MostradorSectores)
-        .ThenInclude(ms => ms.Sector)
-        .AsNoTracking()
-        .OrderBy(m => m.Numero)
-        .ToListAsync();
-  }
+    public async Task<PagedResult<MostradorDto>> GetMostradoresAsync(int page, int pageSize)
+    {
+      var query = _context.Mostradores
+          .AsNoTracking()
+          .OrderBy(m => m.Numero)
+          .ProjectTo<MostradorDto>(_mapper.ConfigurationProvider);
 
-  public async Task<Mostrador?> GetMostradorAsync(int id)
+      return await query.ToPagedResultAsync(page, pageSize);
+    }
+
+  public async Task<MostradorDto?> GetMostradorAsync(int id)
   {
     return await _context.Mostradores
-        .Include(m => m.MostradorSectores)
-        .ThenInclude(ms => ms.Sector)
         .AsNoTracking()
-        .FirstOrDefaultAsync(m => m.Id == id);
+        .Where(m => m.Id == id)
+        .ProjectTo<MostradorDto>(_mapper.ConfigurationProvider)
+        .FirstOrDefaultAsync();
   }
 
   public async Task<(Mostrador? mostrador, string? errorMessage)> CreateMostradorAsync(Mostrador mostrador)

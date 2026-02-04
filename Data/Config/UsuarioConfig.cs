@@ -19,6 +19,7 @@ public class UsuarioConfig : IEntityTypeConfiguration<Usuario>
     builder.Property(e => e.Activo).HasColumnType("tinyint(1)").HasColumnName("activo").HasDefaultValue(true);
     builder.Property(e => e.CreatedAt).HasColumnType("datetime").HasColumnName("created_at").HasDefaultValueSql("CURRENT_TIMESTAMP");
     builder.Property(e => e.UpdatedAt).HasColumnType("datetime").HasColumnName("updated_at").HasDefaultValueSql("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
-    builder.HasOne(u => u.RolNavigation).WithMany(r => r.Usuarios).HasForeignKey(u => u.RolId).OnDelete(DeleteBehavior.Cascade);
+    builder.HasOne(u => u.RolNavigation).WithMany(r => r.Usuarios).HasForeignKey(u => u.RolId).OnDelete(DeleteBehavior.Restrict);
+    builder.HasIndex(e => new { e.Nombre, e.Apellido }).HasDatabaseName("idx_usuarios_nombre_apellido");
   }
 }

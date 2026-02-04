@@ -1,10 +1,12 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Cliente;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -39,13 +41,14 @@ public class ClienteService : IClienteService
     return await _context.Clientes.FindAsync(id);
   }
 
-  public async Task<IEnumerable<Cliente>> GetClientesAsync(int page, int pageSize)
+  public async Task<PagedResult<ClienteDto>> GetClientesAsync(int page, int pageSize)
   {
-    return await _context.Clientes
+    var query = _context.Clientes
+        .AsNoTracking()
         .OrderBy(c => c.Titular)
-        .Skip((page - 1) * pageSize)
-        .Take(pageSize)
-        .ToListAsync();
+        .ProjectTo<ClienteDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
   }
 
   public async Task<(Cliente? cliente, string? errorMessage)> CreateClienteAsync(ClienteCrearDto clienteCrearDto)

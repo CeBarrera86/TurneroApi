@@ -9,7 +9,7 @@ public class SectorConfig : IEntityTypeConfiguration<Sector>
   public void Configure(EntityTypeBuilder<Sector> builder)
   {
     builder.HasKey(e => e.Id).HasName("PRIMARY");
-    builder.ToTable("sectores");
+    builder.ToTable("sectores", t => t.HasCheckConstraint("ck_sectores_letra", "letra IS NULL OR letra REGEXP '^[A-Z]{1,3}$'"));
     builder.HasIndex(e => e.Letra).IsUnique();
     builder.HasIndex(e => e.Nombre).IsUnique();
     builder.Property(e => e.Id).HasColumnType("int unsigned").HasColumnName("id");

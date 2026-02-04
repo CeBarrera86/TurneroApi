@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Turno;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers
 {
@@ -22,15 +23,21 @@ namespace TurneroApi.Controllers
 
     // GET: api/Turno?page=1&pageSize=10
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TurnoDto>>> GetTurnos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    [Authorize(Policy = "ver_turno")]
+    public async Task<ActionResult<PagedResponse<TurnoDto>>> GetTurnos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-      var turnos = await _turnoService.GetTurnosAsync();
-      var turnosDto = _mapper.Map<IEnumerable<TurnoDto>>(turnos);
-      return Ok(turnosDto);
+      if (!PaginationHelper.IsValid(page, pageSize, out var message))
+      {
+        return BadRequest(new { message });
+      }
+
+      var result = await _turnoService.GetTurnosAsync(page, pageSize);
+      return Ok(new PagedResponse<TurnoDto>(result.Items, page, pageSize, result.Total));
     }
 
     // GET: api/Turno/5
     [HttpGet("{id}")]
+    [Authorize(Policy = "ver_turno")]
     public async Task<ActionResult<TurnoDto>> GetTurno(ulong id)
     {
       var turno = await _turnoService.GetTurnoAsync(id);
@@ -40,13 +47,13 @@ namespace TurneroApi.Controllers
         return NotFound();
       }
 
-      var turnoDto = _mapper.Map<TurnoDto>(turno);
-      return Ok(turnoDto);
+      return Ok(turno);
     }
 
     // GET: api/Turno/puesto/{puestoId}/activo
     // Nuevo endpoint para obtener el turno activo de un puesto (si lo necesitas)
     [HttpGet("puesto/{puestoId}/activo")]
+    [Authorize(Policy = "ver_turno")]
     public async Task<ActionResult<TurnoDto>> GetTurnoActivoPorPuesto(int puestoId) // ← int en lugar de uint
     {
       var turno = await _turnoService.GetTurnoActivoPorPuestoIdAsync(puestoId);
@@ -54,13 +61,12 @@ namespace TurneroApi.Controllers
       {
         return NotFound($"No se encontró ningún turno activo para el puesto '{puestoId}'.");
       }
-      var turnoDto = _mapper.Map<TurnoDto>(turno);
-      return Ok(turnoDto);
+      return Ok(turno);
     }
 
     // POST: api/Turno
     [HttpPost]
-    [Authorize(Roles = "Admin, Usuario")] // Ejemplo de autorización, ajusta según tu necesidad
+    [Authorize(Policy = "crear_turno")]
     public async Task<ActionResult<TurnoDto>> PostTurno([FromBody] TurnoCrearDto turnoCrearDto)
     {
       if (!ModelState.IsValid)
@@ -83,7 +89,7 @@ namespace TurneroApi.Controllers
     // PATCH: api/Turno/5 (Para actualizar FechaFin o EstadoId)
     // Usamos PATCH porque solo actualizamos parcialmente el recurso.
     [HttpPatch("{id}")]
-    [Authorize(Roles = "Admin, Usuario")] // Ejemplo de autorización
+    [Authorize(Policy = "editar_turno")]
     public async Task<IActionResult> PatchTurno(ulong id, [FromBody] TurnoActualizarDto turnoActualizarDto)
     {
       if (!ModelState.IsValid)

@@ -9,7 +9,7 @@ public class ContenidoConfig : IEntityTypeConfiguration<Contenido>
   public void Configure(EntityTypeBuilder<Contenido> builder)
   {
     builder.HasKey(e => e.Id).HasName("PRIMARY");
-    builder.ToTable("contenidos");
+    builder.ToTable("contenidos", t => t.HasCheckConstraint("ck_contenidos_tipo", "tipo IN ('imagen','video')"));
     builder.HasIndex(e => e.Nombre).IsUnique();
     builder.Property(e => e.Id).HasColumnType("int unsigned").HasColumnName("id");
     builder.Property(e => e.Nombre).HasMaxLength(100).HasColumnName("nombre");

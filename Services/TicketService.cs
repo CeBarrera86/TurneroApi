@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Ticket;
@@ -7,6 +8,7 @@ using TurneroApi.DTOs.Historial;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Enums;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services
 {
@@ -29,39 +31,38 @@ namespace TurneroApi.Services
       _historialService = historialService;
     }
 
-    public async Task<IEnumerable<Ticket>> GetTicketsAsync()
+    public async Task<PagedResult<TicketDto>> GetTicketsAsync(int page, int pageSize)
     {
-      return await _context.Tickets
-          .Include(t => t.ClienteNavigation)
-          .Include(t => t.EstadoNavigation)
-          .Include(t => t.SectorIdActualNavigation)
-          .Include(t => t.SectorIdOrigenNavigation)
-          .ToListAsync();
+      var query = _context.Tickets
+          .AsNoTracking()
+          .OrderByDescending(t => t.Fecha)
+          .ProjectTo<TicketDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
     }
 
-    public async Task<Ticket?> GetTicketAsync(ulong id)
+    public async Task<TicketDto?> GetTicketAsync(ulong id)
     {
       return await _context.Tickets
-          .Include(t => t.ClienteNavigation)
-          .Include(t => t.EstadoNavigation)
-          .Include(t => t.SectorIdActualNavigation)
-          .Include(t => t.SectorIdOrigenNavigation)
-          .FirstOrDefaultAsync(t => t.Id == id);
+          .AsNoTracking()
+          .Where(t => t.Id == id)
+          .ProjectTo<TicketDto>(_mapper.ConfigurationProvider)
+          .FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<Ticket>> GetTicketsFiltrados(DateTime fecha, int sectorIdOrigen, int estadoId)
+    public async Task<PagedResult<TicketDto>> GetTicketsFiltrados(DateTime fecha, int sectorIdOrigen, int estadoId, int page, int pageSize)
     {
-      return await _context.Tickets
-          .Include(t => t.ClienteNavigation)
-          .Include(t => t.EstadoNavigation)
-          .Include(t => t.SectorIdOrigenNavigation)
-          .Include(t => t.SectorIdActualNavigation)
-          .Where(t =>
-              t.Fecha.Date >= fecha.Date &&
-              t.SectorIdOrigen == sectorIdOrigen &&
-              t.EstadoId == estadoId
-          )
-          .ToListAsync();
+      var query = _context.Tickets
+        .AsNoTracking()
+        .Where(t =>
+          t.Fecha.Date >= fecha.Date &&
+          t.SectorIdOrigen == sectorIdOrigen &&
+          t.EstadoId == estadoId
+        )
+        .OrderByDescending(t => t.Fecha)
+        .ProjectTo<TicketDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
     }
 
     public async Task<(Ticket? ticket, string? errorMessage)> CrearTicket(TicketCrearDto ticketCrearDto)
@@ -144,7 +145,7 @@ namespace TurneroApi.Services
       }
     }
 
-    public async Task<Ticket?> LlamarTicketAsync(ulong id, int? usuarioId)
+    public async Task<TicketDto?> LlamarTicketAsync(ulong id, int? usuarioId)
     {
       var dto = new TicketActualizarDto { EstadoId = (int)EstadoTicket.ATENDIDO };
       var (ticket, _) = await ActualizarTicket(id, dto, usuarioId);
@@ -152,7 +153,7 @@ namespace TurneroApi.Services
       // Aquí podrías emitir un evento si tenés sistema de notificaciones
       // await _eventoService.Emitir("llamandoTicket", ticket.Id);
 
-      return ticket;
+      return ticket == null ? null : _mapper.Map<TicketDto>(ticket);
     }
 
     public async Task<(Ticket? ticket, string? errorMessage)> ActualizarTicket(ulong id, TicketActualizarDto dto, int? usuarioId)
@@ -204,17 +205,14 @@ namespace TurneroApi.Services
       return (ticket, null);
     }
 
-    public async Task<Ticket?> BuscarTicket(string letra, int numero) // ahora int
+    public async Task<TicketDto?> BuscarTicket(string letra, int numero) // ahora int
     {
       var today = DateTime.Today;
-      var ticket = await _context.Tickets
-          .Include(t => t.ClienteNavigation)
-          .Include(t => t.EstadoNavigation)
-          .Include(t => t.SectorIdActualNavigation)
-          .Include(t => t.SectorIdOrigenNavigation)
-          .FirstOrDefaultAsync(t => t.Letra == letra && t.Numero == numero && t.Fecha.Date == today);
-
-      return ticket;
+      return await _context.Tickets
+          .AsNoTracking()
+          .Where(t => t.Letra == letra && t.Numero == numero && t.Fecha.Date == today)
+          .ProjectTo<TicketDto>(_mapper.ConfigurationProvider)
+          .FirstOrDefaultAsync();
     }
   }
 }

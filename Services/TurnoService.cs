@@ -1,9 +1,11 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Turno;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services
 {
@@ -18,23 +20,23 @@ namespace TurneroApi.Services
       _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Turno>> GetTurnosAsync()
+    public async Task<PagedResult<TurnoDto>> GetTurnosAsync(int page, int pageSize)
     {
-      return await _context.Turnos
-        .Include(t => t.PuestoNavigation)
-        .Include(t => t.TicketNavigation)
-        .Include(t => t.EstadoNavigation)
+      var query = _context.Turnos
         .AsNoTracking()
-        .ToListAsync();
+        .OrderByDescending(t => t.FechaInicio)
+        .ProjectTo<TurnoDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
     }
 
-    public async Task<Turno?> GetTurnoAsync(ulong id)
+    public async Task<TurnoDto?> GetTurnoAsync(ulong id)
     {
       return await _context.Turnos
-        .Include(t => t.PuestoNavigation)
-        .Include(t => t.TicketNavigation)
-        .Include(t => t.EstadoNavigation)
-        .FirstOrDefaultAsync(t => t.Id == id);
+        .AsNoTracking()
+        .Where(t => t.Id == id)
+        .ProjectTo<TurnoDto>(_mapper.ConfigurationProvider)
+        .FirstOrDefaultAsync();
     }
 
     public async Task<(Turno? turno, string? errorMessage)> CreateTurnoAsync(TurnoCrearDto turnoCrearDto)
@@ -210,16 +212,15 @@ namespace TurneroApi.Services
     }
 
     // Nuevo método para obtener un turno activo (ATENDIDO) por PuestoId
-    public async Task<Turno?> GetTurnoActivoPorPuestoIdAsync(int puestoId)
+    public async Task<TurnoDto?> GetTurnoActivoPorPuestoIdAsync(int puestoId)
     {
       // Consideramos "activo" como estado ATENDIDO (ID = 1). Ajusta si necesitás otra definición.
       var estadoAtendidoId = 1;
 
       return await _context.Turnos
-          .Include(t => t.PuestoNavigation)
-          .Include(t => t.TicketNavigation)
-          .Include(t => t.EstadoNavigation)
+          .AsNoTracking()
           .Where(t => t.PuestoId == puestoId && t.EstadoId == estadoAtendidoId && t.FechaFin == null)
+          .ProjectTo<TurnoDto>(_mapper.ConfigurationProvider)
           .FirstOrDefaultAsync();
     }
   }

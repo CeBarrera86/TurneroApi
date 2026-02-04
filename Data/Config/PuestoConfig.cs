@@ -18,5 +18,6 @@ public class PuestoConfig : IEntityTypeConfiguration<Puesto>
     builder.Property(e => e.Activo).HasColumnType("tinyint(1)").HasColumnName("activo").HasDefaultValue(true);
     builder.HasOne(p => p.UsuarioNavigation).WithMany(u => u.Puestos).HasForeignKey(p => p.UsuarioId).OnDelete(DeleteBehavior.Restrict);
     builder.HasOne(p => p.MostradorNavigation).WithMany(m => m.Puestos).HasForeignKey(p => p.MostradorId).OnDelete(DeleteBehavior.Restrict);
+    builder.HasIndex(e => e.UsuarioId).HasDatabaseName("idx_puestos_usuario");
   }
 }

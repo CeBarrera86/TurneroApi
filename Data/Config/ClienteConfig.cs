@@ -9,7 +9,7 @@ public class ClienteConfig : IEntityTypeConfiguration<Cliente>
   public void Configure(EntityTypeBuilder<Cliente> builder)
   {
     builder.HasKey(e => e.Id).HasName("PRIMARY");
-    builder.ToTable("clientes");
+    builder.ToTable("clientes", t => t.HasCheckConstraint("ck_clientes_dni", "dni REGEXP '^[0-9]+$'"));
     builder.HasIndex(e => e.Dni).IsUnique();
     builder.Property(e => e.Id).HasColumnType("bigint unsigned").HasColumnName("id");
     builder.Property(e => e.Dni).HasMaxLength(10).HasColumnName("dni");

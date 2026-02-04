@@ -52,7 +52,7 @@ CREATE TABLE sectores (
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (padre_id) REFERENCES sectores(id)
+    FOREIGN KEY (padre_id) REFERENCES sectores(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: mostradores
@@ -76,7 +76,7 @@ CREATE TABLE usuarios (
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (rol_id) REFERENCES roles(id)
+    FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: puestos
@@ -87,8 +87,8 @@ CREATE TABLE puestos (
     login DATETIME,
     logout DATETIME,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
-    FOREIGN KEY (mostrador_id) REFERENCES mostradores(id)
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
+    FOREIGN KEY (mostrador_id) REFERENCES mostradores(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: tickets
@@ -102,10 +102,10 @@ CREATE TABLE tickets (
     sector_id_actual INT UNSIGNED NULL,
     estado_id INT UNSIGNED NOT NULL,
     actualizado DATETIME NULL,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-    FOREIGN KEY (sector_id_origen) REFERENCES sectores(id),
-    FOREIGN KEY (sector_id_actual) REFERENCES sectores(id),
-    FOREIGN KEY (estado_id) REFERENCES estados(id),
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT,
+    FOREIGN KEY (sector_id_origen) REFERENCES sectores(id) ON DELETE RESTRICT,
+    FOREIGN KEY (sector_id_actual) REFERENCES sectores(id) ON DELETE RESTRICT,
+    FOREIGN KEY (estado_id) REFERENCES estados(id) ON DELETE RESTRICT,
     UNIQUE (letra, numero, fecha)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -117,9 +117,9 @@ CREATE TABLE turnos (
     fecha_inicio DATETIME NOT NULL,
     fecha_fin DATETIME DEFAULT NULL,
     estado_id INT UNSIGNED NOT NULL,
-    FOREIGN KEY (puesto_id) REFERENCES puestos(id),
-    FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-    FOREIGN KEY (estado_id) REFERENCES estados(id)
+    FOREIGN KEY (puesto_id) REFERENCES puestos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE RESTRICT,
+    FOREIGN KEY (estado_id) REFERENCES estados(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla: historiales
@@ -132,11 +132,11 @@ CREATE TABLE historiales (
     turno_id BIGINT UNSIGNED NULL,
     usuario_id INT UNSIGNED NULL,
     comentarios VARCHAR(255),
-    FOREIGN KEY (ticket_id) REFERENCES tickets(id),
-    FOREIGN KEY (estado_id) REFERENCES estados(id),
-    FOREIGN KEY (puesto_id) REFERENCES puestos(id),
-    FOREIGN KEY (turno_id) REFERENCES turnos(id),
-    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+    FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE RESTRICT,
+    FOREIGN KEY (estado_id) REFERENCES estados(id) ON DELETE RESTRICT,
+    FOREIGN KEY (puesto_id) REFERENCES puestos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (turno_id) REFERENCES turnos(id) ON DELETE RESTRICT,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla intermedia: rol_permiso
@@ -144,8 +144,8 @@ CREATE TABLE rol_permiso (
     rol_id INT UNSIGNED NOT NULL,
     permiso_id INT UNSIGNED NOT NULL,
     PRIMARY KEY (rol_id, permiso_id),
-    FOREIGN KEY (rol_id) REFERENCES roles(id),
-    FOREIGN KEY (permiso_id) REFERENCES permisos(id)
+    FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE RESTRICT,
+    FOREIGN KEY (permiso_id) REFERENCES permisos(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Tabla intermedia: mostrador_sector
@@ -153,8 +153,8 @@ CREATE TABLE mostrador_sector (
     mostrador_id INT UNSIGNED NOT NULL,
     sector_id INT UNSIGNED NOT NULL,
     PRIMARY KEY (mostrador_id, sector_id),
-    FOREIGN KEY (mostrador_id) REFERENCES mostradores(id),
-    FOREIGN KEY (sector_id) REFERENCES sectores(id)
+    FOREIGN KEY (mostrador_id) REFERENCES mostradores(id) ON DELETE RESTRICT,
+    FOREIGN KEY (sector_id) REFERENCES sectores(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Índices recomendados

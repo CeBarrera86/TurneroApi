@@ -1,10 +1,12 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.RolPermiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -19,22 +21,24 @@ public class RolPermisoService : IRolPermisoService
     _mapper = mapper;
   }
 
-  public async Task<IEnumerable<RolPermiso>> GetRolPermisosAsync()
+  public async Task<PagedResult<RolPermisoDto>> GetRolPermisosAsync(int page, int pageSize)
   {
-    return await _context.RolPermisos
-        .Include(rp => rp.Rol)
-        .Include(rp => rp.Permiso)
+    var query = _context.RolPermisos
         .AsNoTracking()
-        .ToListAsync();
+        .OrderBy(rp => rp.RolId)
+        .ThenBy(rp => rp.PermisoId)
+        .ProjectTo<RolPermisoDto>(_mapper.ConfigurationProvider);
+
+    return await query.ToPagedResultAsync(page, pageSize);
   }
 
-  public async Task<RolPermiso?> GetRolPermisoAsync(int rolId, int permisoId)
+  public async Task<RolPermisoDto?> GetRolPermisoAsync(int rolId, int permisoId)
   {
     return await _context.RolPermisos
-        .Include(rp => rp.Rol)
-        .Include(rp => rp.Permiso)
         .AsNoTracking()
-        .FirstOrDefaultAsync(rp => rp.RolId == rolId && rp.PermisoId == permisoId);
+        .Where(rp => rp.RolId == rolId && rp.PermisoId == permisoId)
+        .ProjectTo<RolPermisoDto>(_mapper.ConfigurationProvider)
+        .FirstOrDefaultAsync();
   }
 
   public async Task<(RolPermiso? rolPermiso, string? errorMessage)> CreateRolPermisoAsync(RolPermisoCrearDto dto)

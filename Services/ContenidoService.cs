@@ -1,3 +1,4 @@
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TurneroApi.Config;
@@ -15,18 +16,21 @@ public class ContenidoService : IContenidoService
   private readonly TurneroDbContext _context;
   private readonly RutasConfig _rutas;
   private readonly IMiniaturaService _miniaturaService;
+  private readonly IMapper _mapper;
 
   public ContenidoService(
       TurneroDbContext context,
       IOptions<RutasConfig> rutas,
-      IMiniaturaService miniaturaService)
+      IMiniaturaService miniaturaService,
+      IMapper mapper)
   {
     _context = context;
     _rutas = rutas.Value;
     _miniaturaService = miniaturaService;
+    _mapper = mapper;
   }
 
-  public async Task<IEnumerable<Contenido>> GetContenidosAsync()
+  public async Task<PagedResult<ContenidoDto>> GetContenidosAsync(int page, int pageSize)
   {
     var rutaBase = _rutas.CarpetaContenidos;
     var archivosFisicos = Directory.GetFiles(rutaBase)
@@ -58,15 +62,22 @@ public class ContenidoService : IContenidoService
     if (registrosSinArchivo.Any() || archivosSinRegistro.Any())
       await _context.SaveChangesAsync();
 
-    return registrosDb
+    var items = registrosDb
         .Where(c => c.Nombre != null && archivosFisicos.Contains(c.Nombre))
         .OrderByDescending(c => c.CreatedAt)
+      .Skip((page - 1) * pageSize)
+      .Take(pageSize)
         .ToList();
+
+    var total = registrosDb.Count(c => c.Nombre != null && archivosFisicos.Contains(c.Nombre));
+    var dtoItems = _mapper.Map<List<ContenidoDto>>(items);
+    return new PagedResult<ContenidoDto>(dtoItems, total);
   }
 
-  public async Task<Contenido?> GetContenidoAsync(uint id)
+  public async Task<ContenidoDto?> GetContenidoAsync(uint id)
   {
-    return await _context.Contenidos.FindAsync(id);
+    var contenido = await _context.Contenidos.FindAsync(id);
+    return contenido == null ? null : _mapper.Map<ContenidoDto>(contenido);
   }
 
   public async Task<(List<Contenido> contenidos, string? errorMessage)> CreateContenidosAsync(List<IFormFile> archivos, List<bool> activos)

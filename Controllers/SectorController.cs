@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Sector;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -23,11 +24,44 @@ public class SectorController : ControllerBase
   // GET: api/Sector
   [HttpGet]
   [Authorize(Policy = "ver_sector")]
-  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectores()
+  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectores([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
   {
-    var sectores = await _sectorService.GetSectoresAsync();
-    var sectoresDto = _mapper.Map<IEnumerable<SectorDto>>(sectores);
-    return Ok(sectoresDto);
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _sectorService.GetSectoresAsync(page, pageSize);
+    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+  }
+
+  // GET: api/Sector
+  [HttpGet("totem-sectores")]
+  [Authorize(Policy = "TotemAccess")]
+  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectoresTotem([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  {
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _sectorService.GetSectoresTotemAsync(page, pageSize);
+    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+
+  }
+
+  // GET: api/Sector
+  [HttpGet("totem-tramites")]
+  [Authorize(Policy = "TotemAccess")]
+  public async Task<ActionResult<PagedResponse<SectorDto>>> GetTramitesTotem([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  {
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _sectorService.GetTramitesTotemAsync(page, pageSize);
+    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
   }
 
   // GET: api/Sector/5
@@ -37,9 +71,7 @@ public class SectorController : ControllerBase
   {
     var sector = await _sectorService.GetSectorAsync(id);
     if (sector == null) return NotFound();
-
-    var sectorDto = _mapper.Map<SectorDto>(sector);
-    return Ok(sectorDto);
+    return Ok(sector);
   }
 
   // POST: api/Sector
@@ -80,21 +112,29 @@ public class SectorController : ControllerBase
   // GET: api/Sector/activos
   [HttpGet("activos")]
   [Authorize(Policy = "ver_sector")]
-  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivos()
+  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectoresActivos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
   {
-    var sectores = await _sectorService.GetSectoresActivosAsync();
-    var sectoresDto = _mapper.Map<IEnumerable<SectorDto>>(sectores);
-    return Ok(sectoresDto);
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _sectorService.GetSectoresActivosAsync(page, pageSize);
+    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
   }
 
   // GET: api/Sector/activos-padres
   [HttpGet("activos-padres")]
   [Authorize(Policy = "ver_sector")]
-  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivosPadres()
+  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectoresActivosPadres([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
   {
-    var sectores = await _sectorService.GetSectoresActivosPadresAsync();
-    var sectoresDto = _mapper.Map<IEnumerable<SectorDto>>(sectores);
-    return Ok(sectoresDto);
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _sectorService.GetSectoresActivosPadresAsync(page, pageSize);
+    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
   }
 
   // DELETE: api/Sector/5

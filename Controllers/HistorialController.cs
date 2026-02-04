@@ -1,9 +1,9 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Authorization; // Add if you plan to use authorization
 using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Historial;
 using TurneroApi.Interfaces;
 using TurneroApi.Models; // If you still need direct model references for some reason
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers
 {
@@ -12,42 +12,47 @@ namespace TurneroApi.Controllers
   public class HistorialController : ControllerBase
   {
     private readonly IHistorialService _historialService;
-    private readonly IMapper _mapper;
-
-    public HistorialController(IHistorialService historialService, IMapper mapper)
+    public HistorialController(IHistorialService historialService)
     {
       _historialService = historialService;
-      _mapper = mapper;
     }
 
     // GET: api/Historial/ticket/{ticketId}?page=1&pageSize=10
     // Para obtener todas las entradas de historial para un ticket específico
     [HttpGet("ticket/{ticketId}")]
-    // [Authorize(Roles = "Admin, Usuario")] // Considerar si todos pueden ver el historial
-    public async Task<ActionResult<IEnumerable<HistorialDto>>> GetHistorialByTicket(ulong ticketId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    [Authorize(Policy = "ver_historial")]
+    public async Task<ActionResult<PagedResponse<HistorialDto>>> GetHistorialByTicket(ulong ticketId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
+      if (!PaginationHelper.IsValid(page, pageSize, out var message))
+      {
+        return BadRequest(new { message });
+      }
+
       var historiales = await _historialService.GetHistorialByTicketIdAsync(ticketId, page, pageSize);
-      if (!historiales.Any())
+      if (!historiales.Items.Any())
       {
         return NotFound($"No se encontró historial para el TicketId '{ticketId}'.");
       }
-      var historialesDto = _mapper.Map<IEnumerable<HistorialDto>>(historiales);
-      return Ok(historialesDto);
+      return Ok(new PagedResponse<HistorialDto>(historiales.Items, page, pageSize, historiales.Total));
     }
 
     // GET: api/Historial/turno/{turnoId}?page=1&pageSize=10
     // Opcional: Para obtener todas las entradas de historial para un turno específico
     [HttpGet("turno/{turnoId}")]
-    // [Authorize(Roles = "Admin, Usuario")]
-    public async Task<ActionResult<IEnumerable<HistorialDto>>> GetHistorialByTurno(ulong turnoId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    [Authorize(Policy = "ver_historial")]
+    public async Task<ActionResult<PagedResponse<HistorialDto>>> GetHistorialByTurno(ulong turnoId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
+      if (!PaginationHelper.IsValid(page, pageSize, out var message))
+      {
+        return BadRequest(new { message });
+      }
+
       var historiales = await _historialService.GetHistorialByTurnoIdAsync(turnoId, page, pageSize);
-      if (!historiales.Any())
+      if (!historiales.Items.Any())
       {
         return NotFound($"No se encontró historial para el TurnoId '{turnoId}'.");
       }
-      var historialesDto = _mapper.Map<IEnumerable<HistorialDto>>(historiales);
-      return Ok(historialesDto);
+      return Ok(new PagedResponse<HistorialDto>(historiales.Items, page, pageSize, historiales.Total));
     }
 
     // No hay GET por ID directo, ni PUT, POST, DELETE si se maneja como un ledger inmutable.

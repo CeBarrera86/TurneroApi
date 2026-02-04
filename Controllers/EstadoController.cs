@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Estado;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 namespace TurneroApi.Controllers
 {
   [Route("api/[controller]")]
@@ -21,15 +22,21 @@ namespace TurneroApi.Controllers
 
     // GET: api/Estado
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<EstadoDto>>> GetEstados()
+    [Authorize(Policy = "ver_estado")]
+    public async Task<ActionResult<PagedResponse<EstadoDto>>> GetEstados([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-      var estados = await _estadoService.GetEstadosAsync();
-      var estadosDto = _mapper.Map<IEnumerable<EstadoDto>>(estados);
-      return Ok(estadosDto);
+      if (!PaginationHelper.IsValid(page, pageSize, out var message))
+      {
+        return BadRequest(new { message });
+      }
+
+      var result = await _estadoService.GetEstadosAsync(page, pageSize);
+      return Ok(new PagedResponse<EstadoDto>(result.Items, page, pageSize, result.Total));
     }
 
     // GET: api/Estado/5
     [HttpGet("{id}")]
+    [Authorize(Policy = "ver_estado")]
     public async Task<ActionResult<EstadoDto>> GetEstado(int id)
     {
       var estado = await _estadoService.GetEstadoAsync(id);
@@ -37,14 +44,12 @@ namespace TurneroApi.Controllers
       {
         return NotFound();
       }
-
-      var estadoDto = _mapper.Map<EstadoDto>(estado);
-      return Ok(estadoDto);
+      return Ok(estado);
     }
 
     // PUT: api/Estado/5
     [HttpPut("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "editar_estado")]
     public async Task<IActionResult> PutEstado(int id, [FromBody] EstadoActualizarDto estadoActualizarDto)
     {
       if (!ModelState.IsValid)
@@ -69,7 +74,7 @@ namespace TurneroApi.Controllers
 
     // POST: api/Estado
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "crear_estado")]
     public async Task<ActionResult<EstadoDto>> PostEstado([FromBody] EstadoCrearDto estadoCrearDto)
     {
       if (!ModelState.IsValid)
@@ -93,7 +98,7 @@ namespace TurneroApi.Controllers
 
     // DELETE: api/Estado/5
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Policy = "eliminar_estado")]
     public async Task<IActionResult> DeleteEstado(int id)
     {
       var (deleted, errorMessage) = await _estadoService.DeleteEstadoAsync(id);

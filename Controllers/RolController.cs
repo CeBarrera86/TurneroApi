@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Rol;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -21,22 +22,29 @@ public class RolController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<RolDto>>> GetRoles()
+  [Authorize(Policy = "ver_rol")]
+  public async Task<ActionResult<PagedResponse<RolDto>>> GetRoles([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
   {
-    var roles = await _rolService.GetRolesAsync();
-    return Ok(_mapper.Map<IEnumerable<RolDto>>(roles));
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _rolService.GetRolesAsync(page, pageSize);
+    return Ok(new PagedResponse<RolDto>(result.Items, page, pageSize, result.Total));
   }
 
   [HttpGet("{id}")]
+  [Authorize(Policy = "ver_rol")]
   public async Task<ActionResult<RolDto>> GetRol(int id)
   {
     var rol = await _rolService.GetRolAsync(id);
     if (rol == null) return NotFound();
-    return Ok(_mapper.Map<RolDto>(rol));
+    return Ok(rol);
   }
 
   [HttpPost]
-  [Authorize(Policy = "Rol.Crear")]
+  [Authorize(Policy = "crear_rol")]
   public async Task<ActionResult<RolDto>> PostRol([FromBody] RolCrearDto rolCrearDto)
   {
     if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -51,7 +59,7 @@ public class RolController : ControllerBase
   }
 
   [HttpPut("{id}")]
-  [Authorize(Policy = "Rol.Actualizar")]
+  [Authorize(Policy = "editar_rol")]
   public async Task<ActionResult<RolDto>> PutRol(int id, [FromBody] RolActualizarDto rolActualizarDto)
   {
     if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -68,7 +76,7 @@ public class RolController : ControllerBase
   }
 
   [HttpDelete("{id}")]
-  [Authorize(Policy = "Rol.Eliminar")]
+  [Authorize(Policy = "eliminar_rol")]
   public async Task<IActionResult> DeleteRol(int id)
   {
     var (deleted, errorMessage) = await _rolService.DeleteRolAsync(id);

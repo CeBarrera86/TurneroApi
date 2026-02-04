@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Ticket;
 using TurneroApi.Interfaces;
 using TurneroApi.Enums;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers
 {
@@ -22,26 +23,39 @@ namespace TurneroApi.Controllers
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<TicketDto>>> GetTickets()
+    [Authorize(Policy = "ver_ticket")]
+    public async Task<ActionResult<PagedResponse<TicketDto>>> GetTickets([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-      var tickets = await _ticketService.GetTicketsAsync();
-      var ticketsDto = _mapper.Map<IEnumerable<TicketDto>>(tickets);
-      return Ok(ticketsDto);
+      if (!PaginationHelper.IsValid(page, pageSize, out var message))
+      {
+        return BadRequest(new { message });
+      }
+
+      var result = await _ticketService.GetTicketsAsync(page, pageSize);
+      return Ok(new PagedResponse<TicketDto>(result.Items, page, pageSize, result.Total));
     }
 
     [HttpGet("filtrados")]
-    public async Task<ActionResult<IEnumerable<TicketDto>>> GetTicketsFiltrados(
+    [Authorize(Policy = "ver_ticket")]
+    public async Task<ActionResult<PagedResponse<TicketDto>>> GetTicketsFiltrados(
       [FromQuery] DateTime fecha,
       [FromQuery] int sectorIdOrigen,
-      [FromQuery] int estadoId = 4)
+      [FromQuery] int estadoId = 4,
+      [FromQuery] int page = 1,
+      [FromQuery] int pageSize = 10)
     {
-      var tickets = await _ticketService.GetTicketsFiltrados(fecha, sectorIdOrigen, estadoId);
-      var ticketsDto = _mapper.Map<IEnumerable<TicketDto>>(tickets);
-      return Ok(ticketsDto);
+      if (!PaginationHelper.IsValid(page, pageSize, out var message))
+      {
+        return BadRequest(new { message });
+      }
+
+      var result = await _ticketService.GetTicketsFiltrados(fecha, sectorIdOrigen, estadoId, page, pageSize);
+      return Ok(new PagedResponse<TicketDto>(result.Items, page, pageSize, result.Total));
     }
 
 
     [HttpGet("{id}")]
+    [Authorize(Policy = "ver_ticket")]
     public async Task<ActionResult<TicketDto>> GetTicket(ulong id)
     {
       var ticket = await _ticketService.GetTicketAsync(id);
@@ -49,12 +63,12 @@ namespace TurneroApi.Controllers
       {
         return NotFound();
       }
-      var ticketDto = _mapper.Map<TicketDto>(ticket);
-      return Ok(ticketDto);
+      return Ok(ticket);
     }
 
     // GET: api/Ticket/search?letra=C&numero=0&date=2025-06-12
     [HttpGet("search")]
+    [Authorize(Policy = "ver_ticket")]
     public async Task<ActionResult<TicketDto>> GetTicketByLetraAndNumeroAndDate([FromQuery] string ticket)
     {
       if (string.IsNullOrWhiteSpace(ticket))
@@ -85,46 +99,37 @@ namespace TurneroApi.Controllers
         return NotFound($"No se encontró ningún ticket con letra '{letra}', número '{numero}'.");
       }
 
-      var ticketDto = _mapper.Map<TicketDto>(ticketBuscado);
-      return Ok(ticketDto);
+      return Ok(ticketBuscado);
     }
 
-    // POST: api/Ticket (Creación de un ticket desde una PC pública)
-    [HttpPost]
-    // No [Authorize] aquí, como lo solicitaste.
-    public async Task<ActionResult<TicketDto>> PostTicket([FromBody] TicketCrearDto ticketCrearDto)
+    // POST: api/Ticket (Endpoint exclusivo del Totem para crear tickets)
+    [HttpPost("totem")]
+    [Authorize(Policy = "TotemAccess")]
+    public async Task<ActionResult<TicketDto>> PostTicketTotem([FromBody] TicketCrearDto ticketCrearDto)
     {
-      if (!ModelState.IsValid)
-      {
-        return BadRequest(ModelState);
-      }
+      if (!ModelState.IsValid) return BadRequest(ModelState);
 
       var (createdTicket, errorMessage) = await _ticketService.CrearTicket(ticketCrearDto);
-
-      if (createdTicket == null)
-      {
-        return BadRequest(new { message = errorMessage });
-      }
+      if (createdTicket == null) return BadRequest(new { message = errorMessage });
 
       var ticketDto = _mapper.Map<TicketDto>(createdTicket);
       return CreatedAtAction(nameof(GetTicket), new { id = ticketDto.Id }, ticketDto);
     }
 
     [HttpPost("{id}/llamar")]
-    [Authorize(Roles = "Admin, Usuario")]
+    [Authorize(Policy = "editar_ticket")]
     public async Task<IActionResult> LlamarTicket(ulong id)
     {
       var usuarioId = ObtenerUsuarioActualId();
       var ticket = await _ticketService.LlamarTicketAsync(id, usuarioId);
       if (ticket == null) return NotFound(new { message = "Ticket no encontrado." });
 
-      var dto = _mapper.Map<TicketDto>(ticket);
-      return Ok(dto);
+      return Ok(ticket);
     }
 
     // PATCH: api/Ticket/5 (Actualización parcial de Estado y SectorIdActual)
     [HttpPatch("{id}")]
-    [Authorize(Roles = "Admin, Usuario")]
+    [Authorize(Policy = "editar_ticket")]
     public async Task<IActionResult> PatchTicket(ulong id, [FromBody] TicketActualizarDto ticketActualizarDto)
     {
       if (!ModelState.IsValid)

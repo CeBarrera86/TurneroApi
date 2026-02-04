@@ -1,29 +1,44 @@
 using AutoMapper;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Prometheus;
+using Serilog;
+using System.Threading.RateLimiting;
 using System.Text;
 using TurneroApi.Data;
-using TurneroApi.Interfaces;
 using TurneroApi.Interfaces.GeaPico;
 using TurneroApi.Mappings;
 using TurneroApi.Services;
 using TurneroApi.Services.GeaPico;
 using TurneroApi.Services.Mocks;
 using TurneroApi.Config;
+using TurneroApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// --- Serilog ---
+Log.Logger = new LoggerConfiguration()
+  .ReadFrom.Configuration(builder.Configuration)
+  .Enrich.FromLogContext()
+  .Enrich.WithCorrelationId()
+  .WriteTo.Console()
+  .CreateLogger();
+
+builder.Host.UseSerilog();
 
 // --- Logging ---
 builder.Logging.AddConsole();
 builder.Logging.SetMinimumLevel(LogLevel.Information);
 
 // --- Controllers ---
-builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
+var mvcBuilder = builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
 {
   options.InvalidModelStateResponseFactory = context =>
   {
@@ -36,6 +51,14 @@ builder.Services.AddControllers().ConfigureApiBehaviorOptions(options =>
     return new BadRequestObjectResult(problemDetails);
   };
 });
+
+// --- FluentValidation ---
+mvcBuilder.AddFluentValidation(fv =>
+  fv.RegisterValidatorsFromAssemblyContaining<TurneroApi.Validation.Fluent.DtoValidators>());
+
+// --- ProblemDetails & ExceptionHandler ---
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // --- Swagger ---
 builder.Services.AddEndpointsApiExplorer();
@@ -60,8 +83,7 @@ builder.Services.AddSwaggerGen(c =>
                     Type = ReferenceType.SecurityScheme,
                     Id = "Bearer"
                 }
-            },
-            new string[] {}
+            }, new string[] {}
         }
     });
 });
@@ -70,15 +92,33 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // --- CORS ---
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
   options.AddDefaultPolicy(policy =>
   {
-    policy.WithOrigins("http://localhost:5173", "http://172.16.14.87:5173", "http://localhost:5174", "http://172.16.14.87:5174")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
+    policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
   });
 });
+
+// --- Rate limiting ---
+builder.Services.AddRateLimiter(options =>
+{
+  options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+  options.AddFixedWindowLimiter("public", limiterOptions =>
+  {
+    limiterOptions.Window = TimeSpan.FromMinutes(1);
+    limiterOptions.PermitLimit = 60;
+    limiterOptions.QueueLimit = 0;
+    limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+  });
+});
+
+// --- Response caching ---
+builder.Services.AddResponseCaching();
+
+// --- Health checks ---
+builder.Services.AddHealthChecks();
 
 // --- Servicios ---
 var geaMode = builder.Configuration["GeaSettings:Modo"];
@@ -92,25 +132,7 @@ else
   builder.Services.AddScoped<IGeaSeguridadService, GeaSeguridadService>();
 }
 
-builder.Services.AddScoped<ContenidoMappingAction>();
-builder.Services.AddScoped<IArchivoService, ArchivoService>();
-builder.Services.AddScoped<IClienteService, ClienteService>();
-builder.Services.AddScoped<IClienteRemotoService, ClienteRemotoService>();
-builder.Services.AddScoped<IContenidoService, ContenidoService>();
-builder.Services.AddScoped<IEstadoService, EstadoService>();
-builder.Services.AddScoped<IHistorialService, HistorialService>();
-builder.Services.AddScoped<IMiniaturaService, MiniaturaService>();
-builder.Services.AddScoped<IMostradorSectorService, MostradorSectorService>();
-builder.Services.AddScoped<IMostradorService, MostradorService>();
-builder.Services.AddScoped<IPuestoService, PuestoService>();
-builder.Services.AddScoped<IRolService, RolService>();
-builder.Services.AddScoped<IRolPermisoService, RolPermisoService>();
-builder.Services.AddScoped<IPermisoService, PermisoService>();
-builder.Services.AddScoped<ISectorService, SectorService>();
-builder.Services.AddScoped<ITicketService, TicketService>();
-builder.Services.AddScoped<ITurnoService, TurnoService>();
-builder.Services.AddScoped<IUrlBuilderService, UrlBuilderService>();
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddTurneroServices();
 
 // --- Conexiones a bases de datos ---
 var turneroConnectionString = builder.Configuration.GetConnectionString("TurneroDb");
@@ -156,25 +178,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // --- Autorización dinámica basada en permisos ---
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, DynamicAuthorizationPolicyProvider>();
 
+// --- Política personalizada para acceso desde el Tótem ---
+var totemIp = builder.Configuration["TotemSettings:Ip"];
+var totemApiKey = builder.Configuration["TotemSettings:ApiKey"];
+
+builder.Services.AddAuthorization(options =>
+{
+  options.AddPolicy("TotemAccess", policy =>
+      policy.RequireAssertion(context =>
+      {
+        var httpContext = context.Resource as HttpContext;
+        if (httpContext == null) return false;
+
+        var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString();
+        var apiKey = httpContext.Request.Headers["X-Api-Key"].FirstOrDefault();
+
+        return remoteIp == totemIp && apiKey == totemApiKey;
+      }));
+});
+
 // --- Rutas NAS ---
 builder.Services.Configure<RutasConfig>(builder.Configuration.GetSection("Rutas"));
 
 // --- Build ---
 var app = builder.Build();
-
-// --- Diagnóstico de conexión ---
-using (var scope = app.Services.CreateScope())
-{
-  var dbContext = scope.ServiceProvider.GetRequiredService<TurneroDbContext>();
-  if (dbContext.Database.CanConnect())
-  {
-    Console.WriteLine("✅ Conexión a la base de datos MySQL exitosa.");
-  }
-  else
-  {
-    Console.WriteLine("❌ Falló la conexión a la base de datos MySQL.");
-  }
-}
 
 // --- Pipeline HTTP ---
 if (app.Environment.IsDevelopment())
@@ -183,24 +210,29 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-  app.UseExceptionHandler("/Error");
+  app.UseExceptionHandler();
   app.UseHsts();
 }
 
-// ⚠️ HTTPS redirection solo si lo necesitás
-// app.UseHttpsRedirection();
+app.UseSerilogRequestLogging();
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseRouting();
 app.UseCors();
+app.UseResponseCaching();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseHttpMetrics();
 
 // --- Swagger condicional ---
-if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("EnableSwagger"))
+if (app.Environment.IsDevelopment())
 {
   app.UseSwagger();
   app.UseSwaggerUI();
 }
 
 app.MapControllers();
+app.MapHealthChecks("/health");
+app.MapMetrics("/metrics");
 app.Run();

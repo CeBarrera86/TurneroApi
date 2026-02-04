@@ -1,9 +1,11 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Historial;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Services
 {
@@ -18,34 +20,26 @@ namespace TurneroApi.Services
       _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Historial>> GetHistorialByTicketIdAsync(ulong ticketId, int page, int pageSize)
+    public async Task<PagedResult<HistorialDto>> GetHistorialByTicketIdAsync(ulong ticketId, int page, int pageSize)
     {
-      return await _context.Historiales
-          .Include(h => h.EstadoNavigation)
-          .Include(h => h.PuestoNavigation)
-          .Include(h => h.TurnoNavigation)
-          .Include(h => h.UsuarioNavigation)
-          .Include(h => h.TicketNavigation) // Si necesitas detalles del ticket en cada historial
+      var query = _context.Historiales
+          .AsNoTracking()
           .Where(h => h.TicketId == ticketId)
-          .OrderBy(h => h.Fecha) // Ordenar por fecha para una línea de tiempo
-          .Skip((page - 1) * pageSize)
-          .Take(pageSize)
-          .ToListAsync();
+          .OrderBy(h => h.Fecha)
+          .ProjectTo<HistorialDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
     }
 
-    public async Task<IEnumerable<Historial>> GetHistorialByTurnoIdAsync(ulong turnoId, int page, int pageSize)
+    public async Task<PagedResult<HistorialDto>> GetHistorialByTurnoIdAsync(ulong turnoId, int page, int pageSize)
     {
-      return await _context.Historiales
-          .Include(h => h.EstadoNavigation)
-          .Include(h => h.PuestoNavigation)
-          .Include(h => h.TurnoNavigation)
-          .Include(h => h.UsuarioNavigation)
-          .Include(h => h.TicketNavigation) // Si necesitas detalles del ticket
+      var query = _context.Historiales
+          .AsNoTracking()
           .Where(h => h.TurnoId == turnoId)
           .OrderBy(h => h.Fecha)
-          .Skip((page - 1) * pageSize)
-          .Take(pageSize)
-          .ToListAsync();
+          .ProjectTo<HistorialDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
     }
 
     public async Task<(Historial? historial, string? errorMessage)> AddHistorialEntryAsync(HistorialCrearDto historialCrearDto)

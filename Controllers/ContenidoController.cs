@@ -1,6 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TurneroApi.DTOs.Contenido;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
@@ -24,14 +25,22 @@ public class ContenidoController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<ContenidoDto>>> GetContenidos()
+  [Authorize(Policy = "ver_contenido")]
+  public async Task<ActionResult<PagedResponse<ContenidoDto>>> GetContenidos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
   {
-    var contenidos = await _service.GetContenidosAsync();
-    return Ok(_mapper.Map<IEnumerable<ContenidoDto>>(contenidos));
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _service.GetContenidosAsync(page, pageSize);
+    return Ok(new PagedResponse<ContenidoDto>(result.Items, page, pageSize, result.Total));
   }
 
   [HttpGet("miniaturas/{nombre}")]
   [AllowAnonymous]
+  [EnableRateLimiting("public")]
+  [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any, NoStore = false)]
   public IActionResult GetMiniatura(string nombre)
   {
     var ruta = _archivoService.ObtenerRutaMiniatura(nombre);
@@ -46,6 +55,8 @@ public class ContenidoController : ControllerBase
 
   [HttpGet("archivos/{nombre}")]
   [AllowAnonymous]
+  [EnableRateLimiting("public")]
+  [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any, NoStore = false)]
   public IActionResult GetArchivo(string nombre)
   {
     var ruta = _archivoService.ObtenerRutaArchivo(nombre);
@@ -57,15 +68,16 @@ public class ContenidoController : ControllerBase
   }
 
   [HttpGet("{id}")]
+  [Authorize(Policy = "ver_contenido")]
   public async Task<ActionResult<ContenidoDto>> GetContenido(uint id)
   {
     var contenido = await _service.GetContenidoAsync(id);
     if (contenido == null) return NotFound();
-    return Ok(_mapper.Map<ContenidoDto>(contenido));
+    return Ok(contenido);
   }
 
   [HttpPost]
-  [Authorize(Roles = "Admin")]
+  [Authorize(Policy = "crear_contenido")]
   public async Task<ActionResult<IEnumerable<ContenidoDto>>> PostContenidos([FromForm] List<IFormFile> archivos, [FromForm] List<bool> activos)
   {
     var (contenidos, error) = await _service.CreateContenidosAsync(archivos, activos);
@@ -76,7 +88,7 @@ public class ContenidoController : ControllerBase
   }
 
   [HttpPut("{id}")]
-  [Authorize(Roles = "Admin")]
+  [Authorize(Policy = "editar_contenido")]
   public async Task<ActionResult<ContenidoDto>> PutContenido(uint id, [FromBody] ContenidoActualizarDto dto)
   {
     var (contenido, error) = await _service.UpdateContenidoAsync(id, dto);
@@ -86,7 +98,7 @@ public class ContenidoController : ControllerBase
   }
 
   [HttpDelete("{id}")]
-  [Authorize(Roles = "Admin")]
+  [Authorize(Policy = "eliminar_contenido")]
   public async Task<IActionResult> DeleteContenido(uint id)
   {
     var (deleted, error) = await _service.DeleteContenidoAsync(id);

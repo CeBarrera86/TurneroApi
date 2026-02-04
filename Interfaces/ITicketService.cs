@@ -1,16 +1,17 @@
 using TurneroApi.DTOs.Ticket;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Interfaces
 {
   public interface ITicketService
   {
-    Task<IEnumerable<Ticket>> GetTicketsAsync();
-    Task<IEnumerable<Ticket>> GetTicketsFiltrados(DateTime fecha, int sectorIdOrigen, int estadoId);
-    Task<Ticket?> GetTicketAsync(ulong id);
+    Task<PagedResult<TicketDto>> GetTicketsAsync(int page, int pageSize);
+    Task<PagedResult<TicketDto>> GetTicketsFiltrados(DateTime fecha, int sectorIdOrigen, int estadoId, int page, int pageSize);
+    Task<TicketDto?> GetTicketAsync(ulong id);
     Task<(Ticket? ticket, string? errorMessage)> CrearTicket(TicketCrearDto ticketCrearDto);
     Task<(Ticket? ticket, string? errorMessage)> ActualizarTicket(ulong id, TicketActualizarDto dto, int? usuarioId);
-    Task<Ticket?> LlamarTicketAsync(ulong id, int? usuarioId);
-    Task<Ticket?> BuscarTicket(string letra, int numero);
+    Task<TicketDto?> LlamarTicketAsync(ulong id, int? usuarioId);
+    Task<TicketDto?> BuscarTicket(string letra, int numero);
   }
 }

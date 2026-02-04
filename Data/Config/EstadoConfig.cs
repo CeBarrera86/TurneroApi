@@ -9,7 +9,7 @@ public class EstadoConfig : IEntityTypeConfiguration<Estado>
   public void Configure(EntityTypeBuilder<Estado> builder)
   {
     builder.HasKey(e => e.Id).HasName("PRIMARY");
-    builder.ToTable("estados");
+    builder.ToTable("estados", t => t.HasCheckConstraint("ck_estados_letra", "letra REGEXP '^[A-Z]{1,2}$'"));
     builder.HasIndex(e => e.Letra).IsUnique();
     builder.Property(e => e.Id).HasColumnType("int unsigned").HasColumnName("id");
     builder.Property(e => e.Letra).HasMaxLength(2).HasColumnName("letra");

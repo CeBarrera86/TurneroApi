@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using TurneroApi.DTOs.Cliente;
 using TurneroApi.Interfaces;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -19,6 +21,7 @@ public class ClienteController : ControllerBase
   // GET: api/Cliente/{dni}
   [HttpGet("{dni}")]
   [AllowAnonymous]
+  [EnableRateLimiting("public")]
   public async Task<ActionResult<ClienteDto>> GetClienteByDni(string dni)
   {
     if (string.IsNullOrWhiteSpace(dni))
@@ -53,16 +56,14 @@ public class ClienteController : ControllerBase
   // GET: api/Cliente?page=1&pageSize=10
   [HttpGet]
   [Authorize(Policy = "ver_cliente")]
-  public async Task<ActionResult<IEnumerable<ClienteDto>>> GetClientes(int page = 1, int pageSize = 10)
+  public async Task<ActionResult<PagedResponse<ClienteDto>>> GetClientes(int page = 1, int pageSize = 10)
   {
-    var clientes = await _clienteService.GetClientesAsync(page, pageSize);
-    var clientesDto = clientes.Select(c => new ClienteDto
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
     {
-      Id = c.Id,
-      Dni = c.Dni,
-      Titular = c.Titular
-    });
+      return BadRequest(new { message });
+    }
 
-    return Ok(clientesDto);
+    var result = await _clienteService.GetClientesAsync(page, pageSize);
+    return Ok(new PagedResponse<ClienteDto>(result.Items, page, pageSize, result.Total));
   }
 }

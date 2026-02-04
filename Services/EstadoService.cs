@@ -1,4 +1,5 @@
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Microsoft.EntityFrameworkCore;
 using TurneroApi.Data;
 using TurneroApi.DTOs.Estado;
@@ -20,14 +21,23 @@ namespace TurneroApi.Services
       _mapper = mapper;
     }
 
-    public async Task<IEnumerable<Estado>> GetEstadosAsync()
+    public async Task<PagedResult<EstadoDto>> GetEstadosAsync(int page, int pageSize)
     {
-      return await _context.Estados.ToListAsync();
+      var query = _context.Estados
+        .AsNoTracking()
+        .OrderBy(e => e.Id)
+        .ProjectTo<EstadoDto>(_mapper.ConfigurationProvider);
+
+      return await query.ToPagedResultAsync(page, pageSize);
     }
 
-    public async Task<Estado?> GetEstadoAsync(int id) // ← int en lugar de uint
+    public async Task<EstadoDto?> GetEstadoAsync(int id) // ← int en lugar de uint
     {
-      return await _context.Estados.FindAsync(id);
+      return await _context.Estados
+        .AsNoTracking()
+        .Where(e => e.Id == id)
+        .ProjectTo<EstadoDto>(_mapper.ConfigurationProvider)
+        .FirstOrDefaultAsync();
     }
 
     public async Task<(Estado? estado, string? errorMessage)> CreateEstadoAsync(Estado estado)

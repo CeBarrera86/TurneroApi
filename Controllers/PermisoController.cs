@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Permiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
+using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -22,25 +23,32 @@ public class PermisoController : ControllerBase
 
   // GET: api/Permiso
   [HttpGet]
-  public async Task<ActionResult<IEnumerable<PermisoDto>>> GetPermisos()
+  [Authorize(Policy = "ver_permiso")]
+  public async Task<ActionResult<PagedResponse<PermisoDto>>> GetPermisos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
   {
-    var permisos = await _permisoService.GetPermisosAsync();
-    return Ok(_mapper.Map<IEnumerable<PermisoDto>>(permisos));
+    if (!PaginationHelper.IsValid(page, pageSize, out var message))
+    {
+      return BadRequest(new { message });
+    }
+
+    var result = await _permisoService.GetPermisosAsync(page, pageSize);
+    return Ok(new PagedResponse<PermisoDto>(result.Items, page, pageSize, result.Total));
   }
 
   // GET: api/Permiso/5
   [HttpGet("{id}")]
+  [Authorize(Policy = "ver_permiso")]
   public async Task<ActionResult<PermisoDto>> GetPermiso(int id)
   {
     var permiso = await _permisoService.GetPermisoAsync(id);
     if (permiso == null) return NotFound();
 
-    return Ok(_mapper.Map<PermisoDto>(permiso));
+    return Ok(permiso);
   }
 
   // POST: api/Permiso
   [HttpPost]
-  [Authorize(Policy = "Permiso.Crear")]
+  [Authorize(Policy = "crear_permiso")]
   public async Task<ActionResult<PermisoDto>> PostPermiso([FromBody] PermisoCrearDto permisoCrearDto)
   {
     if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -56,7 +64,7 @@ public class PermisoController : ControllerBase
 
   // PUT: api/Permiso/5
   [HttpPut("{id}")]
-  [Authorize(Policy = "Permiso.Actualizar")]
+  [Authorize(Policy = "editar_permiso")]
   public async Task<ActionResult<PermisoDto>> PutPermiso(int id, [FromBody] PermisoActualizarDto permisoActualizarDto)
   {
     if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -74,7 +82,7 @@ public class PermisoController : ControllerBase
 
   // DELETE: api/Permiso/5
   [HttpDelete("{id}")]
-  [Authorize(Policy = "Permiso.Eliminar")]
+  [Authorize(Policy = "eliminar_permiso")]
   public async Task<IActionResult> DeletePermiso(int id)
   {
     var (deleted, errorMessage) = await _permisoService.DeletePermisoAsync(id);

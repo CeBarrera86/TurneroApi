@@ -5,3 +5,15 @@ DataBase/turnero_seeder.sql
 .vs/
 *.user
 appsettings.*.json
+*.log
+*.suo
+*.cache
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.VC.opendb
+*.sln.docstates
+node_modules/
+dist/
+.env

@@ -5,7 +5,6 @@ using TurneroApi.Data;
 using TurneroApi.DTOs.Historial;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Services
 {
@@ -20,26 +19,24 @@ namespace TurneroApi.Services
       _mapper = mapper;
     }
 
-    public async Task<PagedResult<HistorialDto>> GetHistorialByTicketIdAsync(ulong ticketId, int page, int pageSize)
+    public async Task<List<HistorialDto>> GetHistorialByTicketIdAsync(ulong ticketId)
     {
-      var query = _context.Historiales
+      return await _context.Historiales
           .AsNoTracking()
           .Where(h => h.TicketId == ticketId)
           .OrderBy(h => h.Fecha)
-          .ProjectTo<HistorialDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+          .ProjectTo<HistorialDto>(_mapper.ConfigurationProvider)
+          .ToListAsync();
     }
 
-    public async Task<PagedResult<HistorialDto>> GetHistorialByTurnoIdAsync(ulong turnoId, int page, int pageSize)
+    public async Task<List<HistorialDto>> GetHistorialByTurnoIdAsync(ulong turnoId)
     {
-      var query = _context.Historiales
+      return await _context.Historiales
           .AsNoTracking()
           .Where(h => h.TurnoId == turnoId)
           .OrderBy(h => h.Fecha)
-          .ProjectTo<HistorialDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+          .ProjectTo<HistorialDto>(_mapper.ConfigurationProvider)
+          .ToListAsync();
     }
 
     public async Task<(Historial? historial, string? errorMessage)> AddHistorialEntryAsync(HistorialCrearDto historialCrearDto)

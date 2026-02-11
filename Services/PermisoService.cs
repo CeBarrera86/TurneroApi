@@ -6,7 +6,6 @@ using TurneroApi.DTOs.Permiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -21,14 +20,13 @@ public class PermisoService : IPermisoService
     _mapper = mapper;
   }
 
-  public async Task<PagedResult<PermisoDto>> GetPermisosAsync(int page, int pageSize)
+  public async Task<List<PermisoDto>> GetPermisosAsync()
   {
-    var query = _context.Permisos
+    return await _context.Permisos
       .AsNoTracking()
       .OrderBy(p => p.Id)
-      .ProjectTo<PermisoDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+      .ProjectTo<PermisoDto>(_mapper.ConfigurationProvider)
+      .ToListAsync();
   }
 
   public async Task<PermisoDto?> GetPermisoAsync(int id)

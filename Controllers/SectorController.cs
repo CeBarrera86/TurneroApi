@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Sector;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -24,44 +23,29 @@ public class SectorController : ControllerBase
   // GET: api/Sector
   [HttpGet]
   [Authorize(Policy = "ver_sector")]
-  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectores([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectores()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _sectorService.GetSectoresAsync(page, pageSize);
-    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+    var result = await _sectorService.GetSectoresAsync();
+    return Ok(result);
   }
 
   // GET: api/Sector
   [HttpGet("totem-sectores")]
   [Authorize(Policy = "TotemAccess")]
-  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectoresTotem([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresTotem()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _sectorService.GetSectoresTotemAsync(page, pageSize);
-    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+    var result = await _sectorService.GetSectoresTotemAsync();
+    return Ok(result);
 
   }
 
   // GET: api/Sector
   [HttpGet("totem-tramites")]
   [Authorize(Policy = "TotemAccess")]
-  public async Task<ActionResult<PagedResponse<SectorDto>>> GetTramitesTotem([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<SectorDto>>> GetTramitesTotem()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _sectorService.GetTramitesTotemAsync(page, pageSize);
-    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+    var result = await _sectorService.GetTramitesTotemAsync();
+    return Ok(result);
   }
 
   // GET: api/Sector/5
@@ -112,29 +96,19 @@ public class SectorController : ControllerBase
   // GET: api/Sector/activos
   [HttpGet("activos")]
   [Authorize(Policy = "ver_sector")]
-  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectoresActivos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivos()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _sectorService.GetSectoresActivosAsync(page, pageSize);
-    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+    var result = await _sectorService.GetSectoresActivosAsync();
+    return Ok(result);
   }
 
   // GET: api/Sector/activos-padres
   [HttpGet("activos-padres")]
   [Authorize(Policy = "ver_sector")]
-  public async Task<ActionResult<PagedResponse<SectorDto>>> GetSectoresActivosPadres([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<SectorDto>>> GetSectoresActivosPadres()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _sectorService.GetSectoresActivosPadresAsync(page, pageSize);
-    return Ok(new PagedResponse<SectorDto>(result.Items, page, pageSize, result.Total));
+    var result = await _sectorService.GetSectoresActivosPadresAsync();
+    return Ok(result);
   }
 
   // DELETE: api/Sector/5

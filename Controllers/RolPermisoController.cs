@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.RolPermiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -22,15 +21,10 @@ public class RolPermisoController : ControllerBase
   }
 
   [HttpGet]
-  public async Task<ActionResult<PagedResponse<RolPermisoDto>>> GetRolPermisos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<RolPermisoDto>>> GetRolPermisos()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _service.GetRolPermisosAsync(page, pageSize);
-    return Ok(new PagedResponse<RolPermisoDto>(result.Items, page, pageSize, result.Total));
+    var result = await _service.GetRolPermisosAsync();
+    return Ok(result);
   }
 
   [HttpGet("{rolId}/{permisoId}")]

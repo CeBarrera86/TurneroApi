@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Turno;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers
 {
@@ -21,18 +20,13 @@ namespace TurneroApi.Controllers
       _mapper = mapper;
     }
 
-    // GET: api/Turno?page=1&pageSize=10
+    // GET: api/Turno
     [HttpGet]
     [Authorize(Policy = "ver_turno")]
-    public async Task<ActionResult<PagedResponse<TurnoDto>>> GetTurnos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<IEnumerable<TurnoDto>>> GetTurnos()
     {
-      if (!PaginationHelper.IsValid(page, pageSize, out var message))
-      {
-        return BadRequest(new { message });
-      }
-
-      var result = await _turnoService.GetTurnosAsync(page, pageSize);
-      return Ok(new PagedResponse<TurnoDto>(result.Items, page, pageSize, result.Total));
+      var result = await _turnoService.GetTurnosAsync();
+      return Ok(result);
     }
 
     // GET: api/Turno/5
@@ -74,7 +68,13 @@ namespace TurneroApi.Controllers
         return BadRequest(ModelState);
       }
 
-      var (createdTurno, errorMessage) = await _turnoService.CreateTurnoAsync(turnoCrearDto);
+      var puestoId = ObtenerPuestoId();
+      if (!puestoId.HasValue)
+      {
+        return Unauthorized(new { message = "PuestoId no disponible en el token." });
+      }
+
+      var (createdTurno, errorMessage) = await _turnoService.CreateTurnoAsync(turnoCrearDto, puestoId.Value);
 
       if (createdTurno == null)
       {
@@ -110,6 +110,12 @@ namespace TurneroApi.Controllers
 
       var turnoDto = _mapper.Map<TurnoDto>(updatedTurno);
       return Ok(turnoDto); // Devuelve el Turno actualizado
+    }
+
+    private int? ObtenerPuestoId()
+    {
+      var claim = User?.FindFirst("puestoId");
+      return claim != null ? int.Parse(claim.Value) : null;
     }
   }
 }

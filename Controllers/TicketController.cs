@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Ticket;
 using TurneroApi.Interfaces;
 using TurneroApi.Enums;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers
 {
@@ -24,33 +23,21 @@ namespace TurneroApi.Controllers
 
     [HttpGet]
     [Authorize(Policy = "ver_ticket")]
-    public async Task<ActionResult<PagedResponse<TicketDto>>> GetTickets([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<IEnumerable<TicketDto>>> GetTickets()
     {
-      if (!PaginationHelper.IsValid(page, pageSize, out var message))
-      {
-        return BadRequest(new { message });
-      }
-
-      var result = await _ticketService.GetTicketsAsync(page, pageSize);
-      return Ok(new PagedResponse<TicketDto>(result.Items, page, pageSize, result.Total));
+      var result = await _ticketService.GetTicketsAsync();
+      return Ok(result);
     }
 
     [HttpGet("filtrados")]
     [Authorize(Policy = "ver_ticket")]
-    public async Task<ActionResult<PagedResponse<TicketDto>>> GetTicketsFiltrados(
+    public async Task<ActionResult<IEnumerable<TicketDto>>> GetTicketsFiltrados(
       [FromQuery] DateTime fecha,
       [FromQuery] int sectorIdOrigen,
-      [FromQuery] int estadoId = 4,
-      [FromQuery] int page = 1,
-      [FromQuery] int pageSize = 10)
+      [FromQuery] int estadoId = 4)
     {
-      if (!PaginationHelper.IsValid(page, pageSize, out var message))
-      {
-        return BadRequest(new { message });
-      }
-
-      var result = await _ticketService.GetTicketsFiltrados(fecha, sectorIdOrigen, estadoId, page, pageSize);
-      return Ok(new PagedResponse<TicketDto>(result.Items, page, pageSize, result.Total));
+      var result = await _ticketService.GetTicketsFiltrados(fecha, sectorIdOrigen, estadoId);
+      return Ok(result);
     }
 
 
@@ -121,7 +108,13 @@ namespace TurneroApi.Controllers
     public async Task<IActionResult> LlamarTicket(ulong id)
     {
       var usuarioId = ObtenerUsuarioActualId();
-      var ticket = await _ticketService.LlamarTicketAsync(id, usuarioId);
+      var puestoId = ObtenerPuestoId();
+      if (!puestoId.HasValue)
+      {
+        return Unauthorized(new { message = "PuestoId no disponible en el token." });
+      }
+
+      var ticket = await _ticketService.LlamarTicketAsync(id, usuarioId, puestoId);
       if (ticket == null) return NotFound(new { message = "Ticket no encontrado." });
 
       return Ok(ticket);
@@ -137,7 +130,17 @@ namespace TurneroApi.Controllers
 
       var usuarioId = ObtenerUsuarioActualId(); // Extraer desde Claims
 
-      var (updatedTicket, errorMessage) = await _ticketService.ActualizarTicket(id, ticketActualizarDto, usuarioId);
+      int? puestoId = null;
+      if (ticketActualizarDto.EstadoId == (int)EstadoTicket.ATENDIDO)
+      {
+        puestoId = ObtenerPuestoId();
+        if (!puestoId.HasValue)
+        {
+          return Unauthorized(new { message = "PuestoId no disponible en el token." });
+        }
+      }
+
+      var (updatedTicket, errorMessage) = await _ticketService.ActualizarTicket(id, ticketActualizarDto, usuarioId, puestoId);
 
       if (updatedTicket == null)
       {
@@ -154,6 +157,12 @@ namespace TurneroApi.Controllers
     private int? ObtenerUsuarioActualId()
     {
       var claim = User?.FindFirst("id");
+      return claim != null ? int.Parse(claim.Value) : null;
+    }
+
+    private int? ObtenerPuestoId()
+    {
+      var claim = User?.FindFirst("puestoId");
       return claim != null ? int.Parse(claim.Value) : null;
     }
 

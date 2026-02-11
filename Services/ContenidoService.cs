@@ -30,7 +30,7 @@ public class ContenidoService : IContenidoService
     _mapper = mapper;
   }
 
-  public async Task<PagedResult<ContenidoDto>> GetContenidosAsync(int page, int pageSize)
+  public async Task<List<ContenidoDto>> GetContenidosAsync()
   {
     var rutaBase = _rutas.CarpetaContenidos;
     var archivosFisicos = Directory.GetFiles(rutaBase)
@@ -65,13 +65,9 @@ public class ContenidoService : IContenidoService
     var items = registrosDb
         .Where(c => c.Nombre != null && archivosFisicos.Contains(c.Nombre))
         .OrderByDescending(c => c.CreatedAt)
-      .Skip((page - 1) * pageSize)
-      .Take(pageSize)
         .ToList();
 
-    var total = registrosDb.Count(c => c.Nombre != null && archivosFisicos.Contains(c.Nombre));
-    var dtoItems = _mapper.Map<List<ContenidoDto>>(items);
-    return new PagedResult<ContenidoDto>(dtoItems, total);
+    return _mapper.Map<List<ContenidoDto>>(items);
   }
 
   public async Task<ContenidoDto?> GetContenidoAsync(uint id)

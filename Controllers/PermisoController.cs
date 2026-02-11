@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Permiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -24,15 +23,10 @@ public class PermisoController : ControllerBase
   // GET: api/Permiso
   [HttpGet]
   [Authorize(Policy = "ver_permiso")]
-  public async Task<ActionResult<PagedResponse<PermisoDto>>> GetPermisos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<PermisoDto>>> GetPermisos()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _permisoService.GetPermisosAsync(page, pageSize);
-    return Ok(new PagedResponse<PermisoDto>(result.Items, page, pageSize, result.Total));
+    var result = await _permisoService.GetPermisosAsync();
+    return Ok(result);
   }
 
   // GET: api/Permiso/5

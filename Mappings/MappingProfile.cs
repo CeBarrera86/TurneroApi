@@ -1,6 +1,5 @@
 using AutoMapper;
 using TurneroApi.Models;
-using TurneroApi.DTOs;
 using TurneroApi.DTOs.Cliente;
 using TurneroApi.DTOs.Contenido;
 using TurneroApi.DTOs.Estado;
@@ -28,7 +27,6 @@ namespace TurneroApi.Mappings
 
       // Contenido
       CreateMap<Contenido, ContenidoDto>().AfterMap<ContenidoMappingAction>();
-      CreateMap<ContenidoCrearDto, Contenido>().ReverseMap();
       CreateMap<ContenidoActualizarDto, Contenido>().ReverseMap();
 
       // Estado
@@ -46,7 +44,9 @@ namespace TurneroApi.Mappings
       CreateMap<HistorialCrearDto, Historial>().ReverseMap();
 
       // Mostrador
-      CreateMap<Mostrador, MostradorDto>();
+      CreateMap<Mostrador, MostradorDto>()
+        .ForMember(dest => dest.Sectores,
+          opt => opt.MapFrom(src => src.MostradorSectores.Select(ms => ms.Sector)));
       CreateMap<MostradorCrearDto, Mostrador>().ReverseMap();
       CreateMap<MostradorActualizarDto, Mostrador>().ReverseMap();
 

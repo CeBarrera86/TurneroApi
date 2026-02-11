@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
@@ -32,7 +31,6 @@ namespace TurneroApi.Controllers
 
     [HttpPost("login")]
     [AllowAnonymous]
-    [EnableRateLimiting("public")]
     public async Task<IActionResult> GenerateToken([FromBody] LoginRequest request)
     {
       var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString();
@@ -103,6 +101,11 @@ namespace TurneroApi.Controllers
 
       await _turneroContext.SaveChangesAsync();
 
+      // Agregar claim puestoId como ClaimTypes.Name + ":puestoId" para máxima compatibilidad
+      claims.Add(new Claim("puestoId", puestoExistente.Id.ToString()));
+      // También como ClaimTypes.NameIdentifier + ":puestoId" (opcional, pero algunos lectores de claims personalizados lo requieren)
+      claims.Add(new Claim($"{ClaimTypes.NameIdentifier}:puestoId", puestoExistente.Id.ToString()));
+
       // Configuración JWT
       var jwtKey = _config["Jwt:Key"];
       var jwtIssuer = _config["Jwt:Issuer"];
@@ -136,6 +139,7 @@ namespace TurneroApi.Controllers
           name = turneroUser.Nombre,
           rol = turneroUser.RolNavigation.Nombre,
           permisos = permisos,
+          puestoId = puestoExistente.Id,
           mostradorTipo = mostrador.Tipo,
           mostradorSector = mostrador.MostradorSectores
         };

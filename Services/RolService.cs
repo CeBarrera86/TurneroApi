@@ -6,7 +6,6 @@ using TurneroApi.DTOs.Rol;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -21,14 +20,13 @@ public class RolService : IRolService
     _mapper = mapper;
   }
 
-  public async Task<PagedResult<RolDto>> GetRolesAsync(int page, int pageSize)
+  public async Task<List<RolDto>> GetRolesAsync()
   {
-    var query = _context.Roles
+    return await _context.Roles
       .AsNoTracking()
       .OrderBy(r => r.Id)
-      .ProjectTo<RolDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+      .ProjectTo<RolDto>(_mapper.ConfigurationProvider)
+      .ToListAsync();
   }
 
   public async Task<RolDto?> GetRolAsync(int id)

@@ -21,14 +21,15 @@ public class MostradorService : IMostradorService
     _mapper = mapper;
   }
 
-    public async Task<PagedResult<MostradorDto>> GetMostradoresAsync(int page, int pageSize)
+    public async Task<List<MostradorDto>> GetMostradoresAsync()
     {
-      var query = _context.Mostradores
-          .AsNoTracking()
-          .OrderBy(m => m.Numero)
-          .ProjectTo<MostradorDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+      return await _context.Mostradores
+            .AsNoTracking()
+            .Include(m => m.MostradorSectores)
+              .ThenInclude(ms => ms.Sector)
+            .OrderBy(m => m.Numero)
+            .ProjectTo<MostradorDto>(_mapper.ConfigurationProvider)
+            .ToListAsync();
     }
 
   public async Task<MostradorDto?> GetMostradorAsync(int id)

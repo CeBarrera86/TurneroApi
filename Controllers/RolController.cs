@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Rol;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -23,15 +22,10 @@ public class RolController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = "ver_rol")]
-  public async Task<ActionResult<PagedResponse<RolDto>>> GetRoles([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<RolDto>>> GetRoles()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _rolService.GetRolesAsync(page, pageSize);
-    return Ok(new PagedResponse<RolDto>(result.Items, page, pageSize, result.Total));
+    var result = await _rolService.GetRolesAsync();
+    return Ok(result);
   }
 
   [HttpGet("{id}")]

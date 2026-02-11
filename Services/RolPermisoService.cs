@@ -6,7 +6,6 @@ using TurneroApi.DTOs.RolPermiso;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Validation;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Services;
 
@@ -21,15 +20,14 @@ public class RolPermisoService : IRolPermisoService
     _mapper = mapper;
   }
 
-  public async Task<PagedResult<RolPermisoDto>> GetRolPermisosAsync(int page, int pageSize)
+  public async Task<List<RolPermisoDto>> GetRolPermisosAsync()
   {
-    var query = _context.RolPermisos
+    return await _context.RolPermisos
         .AsNoTracking()
         .OrderBy(rp => rp.RolId)
         .ThenBy(rp => rp.PermisoId)
-        .ProjectTo<RolPermisoDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+        .ProjectTo<RolPermisoDto>(_mapper.ConfigurationProvider)
+        .ToListAsync();
   }
 
   public async Task<RolPermisoDto?> GetRolPermisoAsync(int rolId, int permisoId)

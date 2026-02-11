@@ -1,12 +1,11 @@
 using TurneroApi.DTOs.Estado;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Interfaces
 {
   public interface IEstadoService
   {
-    Task<PagedResult<EstadoDto>> GetEstadosAsync(int page, int pageSize);
+    Task<List<EstadoDto>> GetEstadosAsync();
     Task<EstadoDto?> GetEstadoAsync(int id);
     Task<(Estado? estado, string? errorMessage)> CreateEstadoAsync(Estado estado);
     Task<(Estado? estado, string? errorMessage)> UpdateEstadoAsync(int id, EstadoActualizarDto estadoActualizarDto);

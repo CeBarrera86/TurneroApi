@@ -40,10 +40,6 @@ public class TicketCrearDtoValidator : AbstractValidator<TicketCrearDto>
   {
     RuleFor(x => x.ClienteId).GreaterThan(0UL);
     RuleFor(x => x.SectorIdOrigen).GreaterThan(0);
-    RuleFor(x => x.Letra)
-      .NotEmpty()
-      .MaximumLength(2)
-      .Matches("^[A-Z]{1,2}$").WithMessage("La letra debe contener solo letras mayúsculas.");
   }
 }
 
@@ -60,10 +56,7 @@ public class TurnoCrearDtoValidator : AbstractValidator<TurnoCrearDto>
 {
   public TurnoCrearDtoValidator()
   {
-    RuleFor(x => x.PuestoId).GreaterThan(0);
     RuleFor(x => x.TicketId).GreaterThan(0UL);
-    RuleFor(x => x.EstadoId).GreaterThan(0);
-    RuleFor(x => x.FechaInicio).NotEmpty();
   }
 }
 

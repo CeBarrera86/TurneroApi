@@ -21,36 +21,33 @@ public class SectorService : ISectorService
     _mapper = mapper;
   }
 
-  public async Task<PagedResult<SectorDto>> GetSectoresAsync(int page, int pageSize)
+  public async Task<List<SectorDto>> GetSectoresAsync()
   {
-    var query = _context.Sectores
+    return await _context.Sectores
         .AsNoTracking()
         .OrderBy(s => s.Nombre ?? s.Letra)
-        .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+        .ProjectTo<SectorDto>(_mapper.ConfigurationProvider)
+        .ToListAsync();
   }
 
-  public async Task<PagedResult<SectorDto>> GetSectoresTotemAsync(int page, int pageSize)
+  public async Task<List<SectorDto>> GetSectoresTotemAsync()
   {
-    var query = _context.Sectores
+    return await _context.Sectores
     .AsNoTracking()
     .Where(s => s.Activo && s.PadreId == null)
     .OrderBy(s => s.Id)
-    .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+    .ProjectTo<SectorDto>(_mapper.ConfigurationProvider)
+    .ToListAsync();
   }
 
-  public async Task<PagedResult<SectorDto>> GetTramitesTotemAsync(int page, int pageSize)
+  public async Task<List<SectorDto>> GetTramitesTotemAsync()
   {
-    var query = _context.Sectores
+    return await _context.Sectores
     .AsNoTracking()
     .Where(s => s.Activo && s.PadreId != null)
     .OrderBy(s => s.Id)
-    .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+    .ProjectTo<SectorDto>(_mapper.ConfigurationProvider)
+    .ToListAsync();
   }
 
   public async Task<SectorDto?> GetSectorAsync(int id)
@@ -166,26 +163,24 @@ public class SectorService : ISectorService
     }
   }
 
-    public async Task<PagedResult<SectorDto>> GetSectoresActivosAsync(int page, int pageSize)
+    public async Task<List<SectorDto>> GetSectoresActivosAsync()
     {
-      var query = _context.Sectores
+      return await _context.Sectores
           .AsNoTracking()
           .Where(s => s.Activo)
           .OrderBy(s => s.Nombre ?? s.Letra)
-          .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+          .ProjectTo<SectorDto>(_mapper.ConfigurationProvider)
+          .ToListAsync();
     }
 
-    public async Task<PagedResult<SectorDto>> GetSectoresActivosPadresAsync(int page, int pageSize)
+    public async Task<List<SectorDto>> GetSectoresActivosPadresAsync()
     {
-      var query = _context.Sectores
+      return await _context.Sectores
           .AsNoTracking()
           .Where(s => s.Activo && s.PadreId == null)
           .OrderBy(s => s.Nombre ?? s.Letra)
-          .ProjectTo<SectorDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+          .ProjectTo<SectorDto>(_mapper.ConfigurationProvider)
+          .ToListAsync();
     }
 
   public async Task<(bool deleted, string? errorMessage)> DeleteSectorAsync(int id)

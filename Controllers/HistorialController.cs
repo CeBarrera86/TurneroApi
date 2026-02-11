@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Historial;
 using TurneroApi.Interfaces;
 using TurneroApi.Models; // If you still need direct model references for some reason
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers
 {
@@ -17,42 +16,32 @@ namespace TurneroApi.Controllers
       _historialService = historialService;
     }
 
-    // GET: api/Historial/ticket/{ticketId}?page=1&pageSize=10
+    // GET: api/Historial/ticket/{ticketId}
     // Para obtener todas las entradas de historial para un ticket específico
     [HttpGet("ticket/{ticketId}")]
     [Authorize(Policy = "ver_historial")]
-    public async Task<ActionResult<PagedResponse<HistorialDto>>> GetHistorialByTicket(ulong ticketId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<IEnumerable<HistorialDto>>> GetHistorialByTicket(ulong ticketId)
     {
-      if (!PaginationHelper.IsValid(page, pageSize, out var message))
-      {
-        return BadRequest(new { message });
-      }
-
-      var historiales = await _historialService.GetHistorialByTicketIdAsync(ticketId, page, pageSize);
-      if (!historiales.Items.Any())
+      var historiales = await _historialService.GetHistorialByTicketIdAsync(ticketId);
+      if (!historiales.Any())
       {
         return NotFound($"No se encontró historial para el TicketId '{ticketId}'.");
       }
-      return Ok(new PagedResponse<HistorialDto>(historiales.Items, page, pageSize, historiales.Total));
+      return Ok(historiales);
     }
 
-    // GET: api/Historial/turno/{turnoId}?page=1&pageSize=10
+    // GET: api/Historial/turno/{turnoId}
     // Opcional: Para obtener todas las entradas de historial para un turno específico
     [HttpGet("turno/{turnoId}")]
     [Authorize(Policy = "ver_historial")]
-    public async Task<ActionResult<PagedResponse<HistorialDto>>> GetHistorialByTurno(ulong turnoId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<IEnumerable<HistorialDto>>> GetHistorialByTurno(ulong turnoId)
     {
-      if (!PaginationHelper.IsValid(page, pageSize, out var message))
-      {
-        return BadRequest(new { message });
-      }
-
-      var historiales = await _historialService.GetHistorialByTurnoIdAsync(turnoId, page, pageSize);
-      if (!historiales.Items.Any())
+      var historiales = await _historialService.GetHistorialByTurnoIdAsync(turnoId);
+      if (!historiales.Any())
       {
         return NotFound($"No se encontró historial para el TurnoId '{turnoId}'.");
       }
-      return Ok(new PagedResponse<HistorialDto>(historiales.Items, page, pageSize, historiales.Total));
+      return Ok(historiales);
     }
 
     // No hay GET por ID directo, ni PUT, POST, DELETE si se maneja como un ledger inmutable.

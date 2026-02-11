@@ -21,14 +21,13 @@ namespace TurneroApi.Services
       _mapper = mapper;
     }
 
-    public async Task<PagedResult<EstadoDto>> GetEstadosAsync(int page, int pageSize)
+    public async Task<List<EstadoDto>> GetEstadosAsync()
     {
-      var query = _context.Estados
+      return await _context.Estados
         .AsNoTracking()
         .OrderBy(e => e.Id)
-        .ProjectTo<EstadoDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+        .ProjectTo<EstadoDto>(_mapper.ConfigurationProvider)
+        .ToListAsync();
     }
 
     public async Task<EstadoDto?> GetEstadoAsync(int id) // ← int en lugar de uint

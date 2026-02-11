@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Usuario;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -24,15 +23,10 @@ public class UsuarioController : ControllerBase
 	// GET: api/Usuario
 	[HttpGet]
 	[Authorize(Policy = "ver_usuario")]
-	public async Task<ActionResult<PagedResponse<UsuarioDto>>> GetUsuarios(int page = 1, int pageSize = 10)
+	public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetUsuarios()
 	{
-		if (!PaginationHelper.IsValid(page, pageSize, out var message))
-		{
-			return BadRequest(new { message });
-		}
-
-		var result = await _usuarioService.GetUsuariosAsync(page, pageSize);
-		return Ok(new PagedResponse<UsuarioDto>(result.Items, page, pageSize, result.Total));
+		var result = await _usuarioService.GetUsuariosAsync();
+		return Ok(result);
 	}
 
 	// GET: api/Usuario/5

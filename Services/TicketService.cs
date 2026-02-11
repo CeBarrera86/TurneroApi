@@ -8,7 +8,8 @@ using TurneroApi.DTOs.Historial;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
 using TurneroApi.Enums;
-using TurneroApi.Utils;
+using TurneroApi.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace TurneroApi.Services
 {
@@ -18,27 +19,29 @@ namespace TurneroApi.Services
     private readonly IMapper _mapper;
     private readonly ITurnoService _turnoService;
     private readonly IHistorialService _historialService;
+    private readonly IHubContext<TicketsHub> _hubContext;
 
     public TicketService(
         TurneroDbContext context,
         IMapper mapper,
         ITurnoService turnoService,
-        IHistorialService historialService)
+        IHistorialService historialService,
+        IHubContext<TicketsHub> hubContext)
     {
       _context = context;
       _mapper = mapper;
       _turnoService = turnoService;
       _historialService = historialService;
+      _hubContext = hubContext;
     }
 
-    public async Task<PagedResult<TicketDto>> GetTicketsAsync(int page, int pageSize)
+    public async Task<List<TicketDto>> GetTicketsAsync()
     {
-      var query = _context.Tickets
+      return await _context.Tickets
           .AsNoTracking()
           .OrderByDescending(t => t.Fecha)
-          .ProjectTo<TicketDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+          .ProjectTo<TicketDto>(_mapper.ConfigurationProvider)
+          .ToListAsync();
     }
 
     public async Task<TicketDto?> GetTicketAsync(ulong id)
@@ -50,9 +53,9 @@ namespace TurneroApi.Services
           .FirstOrDefaultAsync();
     }
 
-    public async Task<PagedResult<TicketDto>> GetTicketsFiltrados(DateTime fecha, int sectorIdOrigen, int estadoId, int page, int pageSize)
+    public async Task<List<TicketDto>> GetTicketsFiltrados(DateTime fecha, int sectorIdOrigen, int estadoId)
     {
-      var query = _context.Tickets
+      return await _context.Tickets
         .AsNoTracking()
         .Where(t =>
           t.Fecha.Date >= fecha.Date &&
@@ -60,9 +63,8 @@ namespace TurneroApi.Services
           t.EstadoId == estadoId
         )
         .OrderByDescending(t => t.Fecha)
-        .ProjectTo<TicketDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+        .ProjectTo<TicketDto>(_mapper.ConfigurationProvider)
+        .ToListAsync();
     }
 
     public async Task<(Ticket? ticket, string? errorMessage)> CrearTicket(TicketCrearDto ticketCrearDto)
@@ -137,6 +139,9 @@ namespace TurneroApi.Services
         }
         await _context.Entry(ticket).Reference(t => t.SectorIdOrigenNavigation).LoadAsync();
 
+        var ticketDto = _mapper.Map<TicketDto>(ticket);
+        await _hubContext.Clients.All.SendAsync("ticketCreated", ticketDto);
+
         return (ticket, null);
       }
       catch (DbUpdateException ex)
@@ -145,10 +150,10 @@ namespace TurneroApi.Services
       }
     }
 
-    public async Task<TicketDto?> LlamarTicketAsync(ulong id, int? usuarioId)
+    public async Task<TicketDto?> LlamarTicketAsync(ulong id, int? usuarioId, int? puestoId)
     {
       var dto = new TicketActualizarDto { EstadoId = (int)EstadoTicket.ATENDIDO };
-      var (ticket, _) = await ActualizarTicket(id, dto, usuarioId);
+      var (ticket, _) = await ActualizarTicket(id, dto, usuarioId, puestoId);
 
       // Aquí podrías emitir un evento si tenés sistema de notificaciones
       // await _eventoService.Emitir("llamandoTicket", ticket.Id);
@@ -156,7 +161,7 @@ namespace TurneroApi.Services
       return ticket == null ? null : _mapper.Map<TicketDto>(ticket);
     }
 
-    public async Task<(Ticket? ticket, string? errorMessage)> ActualizarTicket(ulong id, TicketActualizarDto dto, int? usuarioId)
+    public async Task<(Ticket? ticket, string? errorMessage)> ActualizarTicket(ulong id, TicketActualizarDto dto, int? usuarioId, int? puestoId)
     {
       var ticket = await _context.Tickets.FirstOrDefaultAsync(t => t.Id == id);
       if (ticket == null)
@@ -172,13 +177,15 @@ namespace TurneroApi.Services
 
         if ((EstadoTicket)dto.EstadoId.Value == EstadoTicket.ATENDIDO)
         {
+          if (!puestoId.HasValue)
+          {
+            return (null, "PuestoId no disponible para crear el turno.");
+          }
+
           await _turnoService.CreateTurnoAsync(new TurnoCrearDto
           {
-            TicketId = ticket.Id,
-            PuestoId = 1, // Podrías parametrizar esto
-            EstadoId = dto.EstadoId.Value,
-            FechaInicio = DateTime.Now
-          });
+            TicketId = ticket.Id
+          }, puestoId.Value);
         }
 
         await _historialService.AddHistorialEntryAsync(new HistorialCrearDto

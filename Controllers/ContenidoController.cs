@@ -1,7 +1,6 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using TurneroApi.DTOs.Contenido;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
@@ -26,21 +25,14 @@ public class ContenidoController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = "ver_contenido")]
-  public async Task<ActionResult<PagedResponse<ContenidoDto>>> GetContenidos([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<ContenidoDto>>> GetContenidos()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _service.GetContenidosAsync(page, pageSize);
-    return Ok(new PagedResponse<ContenidoDto>(result.Items, page, pageSize, result.Total));
+    var result = await _service.GetContenidosAsync();
+    return Ok(result);
   }
 
   [HttpGet("miniaturas/{nombre}")]
   [AllowAnonymous]
-  [EnableRateLimiting("public")]
-  [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any, NoStore = false)]
   public IActionResult GetMiniatura(string nombre)
   {
     var ruta = _archivoService.ObtenerRutaMiniatura(nombre);
@@ -55,8 +47,6 @@ public class ContenidoController : ControllerBase
 
   [HttpGet("archivos/{nombre}")]
   [AllowAnonymous]
-  [EnableRateLimiting("public")]
-  [ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any, NoStore = false)]
   public IActionResult GetArchivo(string nombre)
   {
     var ruta = _archivoService.ObtenerRutaArchivo(nombre);

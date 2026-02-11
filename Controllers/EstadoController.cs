@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Estado;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 namespace TurneroApi.Controllers
 {
   [Route("api/[controller]")]
@@ -23,15 +22,10 @@ namespace TurneroApi.Controllers
     // GET: api/Estado
     [HttpGet]
     [Authorize(Policy = "ver_estado")]
-    public async Task<ActionResult<PagedResponse<EstadoDto>>> GetEstados([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<IEnumerable<EstadoDto>>> GetEstados()
     {
-      if (!PaginationHelper.IsValid(page, pageSize, out var message))
-      {
-        return BadRequest(new { message });
-      }
-
-      var result = await _estadoService.GetEstadosAsync(page, pageSize);
-      return Ok(new PagedResponse<EstadoDto>(result.Items, page, pageSize, result.Total));
+      var result = await _estadoService.GetEstadosAsync();
+      return Ok(result);
     }
 
     // GET: api/Estado/5

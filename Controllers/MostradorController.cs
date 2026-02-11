@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using TurneroApi.DTOs.Mostrador;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Controllers;
 
@@ -23,15 +22,10 @@ public class MostradorController : ControllerBase
 
   [HttpGet]
   [Authorize(Policy = "ver_mostrador")]
-  public async Task<ActionResult<PagedResponse<MostradorDto>>> GetMostradores([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+  public async Task<ActionResult<IEnumerable<MostradorDto>>> GetMostradores()
   {
-    if (!PaginationHelper.IsValid(page, pageSize, out var message))
-    {
-      return BadRequest(new { message });
-    }
-
-    var result = await _mostradorService.GetMostradoresAsync(page, pageSize);
-    return Ok(new PagedResponse<MostradorDto>(result.Items, page, pageSize, result.Total));
+    var result = await _mostradorService.GetMostradoresAsync();
+    return Ok(result);
   }
 
   [HttpGet("{id}")]

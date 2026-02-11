@@ -3,35 +3,21 @@ using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Prometheus;
-using Serilog;
-using System.Threading.RateLimiting;
 using System.Text;
 using TurneroApi.Data;
+using TurneroApi.Hubs;
 using TurneroApi.Interfaces.GeaPico;
 using TurneroApi.Mappings;
 using TurneroApi.Services;
 using TurneroApi.Services.GeaPico;
-using TurneroApi.Services.Mocks;
 using TurneroApi.Config;
 using TurneroApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// --- Serilog ---
-Log.Logger = new LoggerConfiguration()
-  .ReadFrom.Configuration(builder.Configuration)
-  .Enrich.FromLogContext()
-  .Enrich.WithCorrelationId()
-  .WriteTo.Console()
-  .CreateLogger();
-
-builder.Host.UseSerilog();
 
 // --- Logging ---
 builder.Logging.AddConsole();
@@ -88,6 +74,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+  // --- SignalR ---
+  builder.Services.AddSignalR();
+
 // --- AutoMapper ---
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
@@ -97,40 +86,16 @@ builder.Services.AddCors(options =>
 {
   options.AddDefaultPolicy(policy =>
   {
-    policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+    policy.WithOrigins(allowedOrigins)
+      .AllowAnyHeader()
+      .AllowAnyMethod()
+      .AllowCredentials();
   });
 });
 
-// --- Rate limiting ---
-builder.Services.AddRateLimiter(options =>
-{
-  options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-  options.AddFixedWindowLimiter("public", limiterOptions =>
-  {
-    limiterOptions.Window = TimeSpan.FromMinutes(1);
-    limiterOptions.PermitLimit = 60;
-    limiterOptions.QueueLimit = 0;
-    limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-  });
-});
-
-// --- Response caching ---
-builder.Services.AddResponseCaching();
-
-// --- Health checks ---
-builder.Services.AddHealthChecks();
 
 // --- Servicios ---
-var geaMode = builder.Configuration["GeaSettings:Modo"];
-if (geaMode == "Mock")
-{
-  builder.Services.AddScoped<IGeaSeguridadService, MockGeaSeguridadService>();
-  builder.Logging.AddFilter("TurneroApi.Services.Mocks.MockGeaSeguridadService", LogLevel.Information);
-}
-else
-{
-  builder.Services.AddScoped<IGeaSeguridadService, GeaSeguridadService>();
-}
+builder.Services.AddScoped<IGeaSeguridadService, GeaSeguridadService>();
 
 builder.Services.AddTurneroServices();
 
@@ -173,6 +138,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
               builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is not configured.")
           ))
       };
+
+      options.Events = new JwtBearerEvents
+      {
+        OnMessageReceived = context =>
+        {
+          var accessToken = context.Request.Query["access_token"];
+          var path = context.HttpContext.Request.Path;
+
+          if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/tickets"))
+          {
+            context.Token = accessToken;
+          }
+
+          return Task.CompletedTask;
+        }
+      };
     });
 
 // --- Autorización dinámica basada en permisos ---
@@ -214,16 +195,10 @@ else
   app.UseHsts();
 }
 
-app.UseSerilogRequestLogging();
-app.UseMiddleware<CorrelationIdMiddleware>();
-
 app.UseRouting();
 app.UseCors();
-app.UseResponseCaching();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseHttpMetrics();
 
 // --- Swagger condicional ---
 if (app.Environment.IsDevelopment())
@@ -233,6 +208,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
-app.MapHealthChecks("/health");
-app.MapMetrics("/metrics");
+app.MapHub<TicketsHub>("/hubs/tickets");
 app.Run();

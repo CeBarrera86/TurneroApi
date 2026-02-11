@@ -5,7 +5,6 @@ using TurneroApi.Data;
 using TurneroApi.DTOs.Turno;
 using TurneroApi.Interfaces;
 using TurneroApi.Models;
-using TurneroApi.Utils;
 
 namespace TurneroApi.Services
 {
@@ -20,14 +19,13 @@ namespace TurneroApi.Services
       _mapper = mapper;
     }
 
-    public async Task<PagedResult<TurnoDto>> GetTurnosAsync(int page, int pageSize)
+    public async Task<List<TurnoDto>> GetTurnosAsync()
     {
-      var query = _context.Turnos
+      return await _context.Turnos
         .AsNoTracking()
         .OrderByDescending(t => t.FechaInicio)
-        .ProjectTo<TurnoDto>(_mapper.ConfigurationProvider);
-
-      return await query.ToPagedResultAsync(page, pageSize);
+        .ProjectTo<TurnoDto>(_mapper.ConfigurationProvider)
+        .ToListAsync();
     }
 
     public async Task<TurnoDto?> GetTurnoAsync(ulong id)
@@ -39,12 +37,12 @@ namespace TurneroApi.Services
         .FirstOrDefaultAsync();
     }
 
-    public async Task<(Turno? turno, string? errorMessage)> CreateTurnoAsync(TurnoCrearDto turnoCrearDto)
+    public async Task<(Turno? turno, string? errorMessage)> CreateTurnoAsync(TurnoCrearDto turnoCrearDto, int puestoId)
     {
       // Validaciones de existencia
-      var puestoExiste = await _context.Puestos.AnyAsync(p => p.Id == turnoCrearDto.PuestoId);
+      var puestoExiste = await _context.Puestos.AnyAsync(p => p.Id == puestoId);
       if (!puestoExiste)
-        return (null, $"El PuestoId '{turnoCrearDto.PuestoId}' no existe.");
+        return (null, $"El PuestoId '{puestoId}' no existe.");
 
       var ticketExiste = await _context.Tickets.AnyAsync(t => t.Id == turnoCrearDto.TicketId);
       if (!ticketExiste)
@@ -57,9 +55,9 @@ namespace TurneroApi.Services
 
       // Un puesto no puede tener más de un turno atendido activo
       var turnoActivoExistente = await _context.Turnos
-          .AnyAsync(t => t.PuestoId == turnoCrearDto.PuestoId && t.EstadoId == estadoAtendido.Id);
+          .AnyAsync(t => t.PuestoId == puestoId && t.EstadoId == estadoAtendido.Id);
       if (turnoActivoExistente)
-        return (null, $"El puesto '{turnoCrearDto.PuestoId}' ya tiene un turno 'ATENDIDO' activo.");
+        return (null, $"El puesto '{puestoId}' ya tiene un turno 'ATENDIDO' activo.");
 
       // Un ticket no puede estar atendido en múltiples turnos simultáneamente
       var ticketAtendidoExistente = await _context.Turnos
@@ -68,6 +66,7 @@ namespace TurneroApi.Services
         return (null, $"El Ticket '{turnoCrearDto.TicketId}' ya está siendo atendido en otro turno.");
 
       var turno = _mapper.Map<Turno>(turnoCrearDto);
+      turno.PuestoId = puestoId;
       turno.FechaInicio = DateTime.Now;
       turno.EstadoId = estadoAtendido.Id;
       turno.FechaFin = null;

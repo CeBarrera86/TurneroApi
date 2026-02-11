@@ -21,14 +21,13 @@ public class UsuarioService : IUsuarioService
     _mapper = mapper;
   }
 
-  public async Task<PagedResult<UsuarioDto>> GetUsuariosAsync(int page, int pageSize)
+  public async Task<List<UsuarioDto>> GetUsuariosAsync()
   {
-    var query = _context.Usuarios
+    return await _context.Usuarios
       .AsNoTracking()
       .OrderBy(u => u.Id)
-      .ProjectTo<UsuarioDto>(_mapper.ConfigurationProvider);
-
-    return await query.ToPagedResultAsync(page, pageSize);
+      .ProjectTo<UsuarioDto>(_mapper.ConfigurationProvider)
+      .ToListAsync();
   }
 
   public async Task<UsuarioDto?> GetUsuarioAsync(int id)
